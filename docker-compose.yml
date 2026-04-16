@@ -1,0 +1,53 @@
+# Nafetha API (5005) + admin UI (5173) for a VPS.
+#
+# PostgreSQL: not defined here. Point DATABASE_URL at your existing Postgres:
+#   • Same user-defined network as another stack: postgresql://USER:PASS@postgres:5432/DB
+#   • Postgres only on the host: postgresql://USER:PASS@host.docker.internal:5432/DB
+#     (Linux: ensure extra_hosts below is enabled)
+#   • Or the Docker bridge gateway (often 172.17.0.1): postgresql://USER:PASS@172.17.0.1:5432/DB
+#
+# Copy .env (or export vars) with at least DATABASE_URL and JWT_SECRET_KEY (see app/config.py).
+#
+# Join an existing network (where Postgres already runs):
+#   networks:
+#     default:
+#       name: your_external_network
+#       external: true
+#   Then remove the internal `nafetha` network block and attach both services to `default`.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: nafetha-api
+    restart: unless-stopped
+    ports:
+      - "5005:5005"
+    env_file:
+      - .env
+    # Persist LinkedIn session.json and scraper output; requires this repo path on the host
+    volumes:
+      - ./nafetha-scrapers:/app/nafetha-scrapers
+    networks:
+      - nafetha
+    # Linux: reach Postgres on the VPS host from the container
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  admin-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.admin-ui
+    container_name: nafetha-admin-ui
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    networks:
+      - nafetha
+
+networks:
+  nafetha:
+    driver: bridge

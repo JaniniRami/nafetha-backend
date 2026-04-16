@@ -1,0 +1,35 @@
+# API (FastAPI + uvicorn on 5005). PostgreSQL is expected outside this image — set DATABASE_URL
+# (e.g. another container on a shared Docker network, or host-gateway).
+
+FROM python:3.12-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Vendored LinkedIn scraper (Playwright)
+COPY nafetha-scrapers/linkedin_scraper /tmp/linkedin_scraper
+RUN pip install --no-cache-dir /tmp/linkedin_scraper \
+    && rm -rf /tmp/linkedin_scraper \
+    && playwright install chromium --with-deps
+
+COPY alembic.ini .
+COPY alembic ./alembic
+COPY app ./app
+COPY main.py .
+COPY nafetha-scrapers ./nafetha-scrapers
+
+EXPOSE 5005
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5005"]
