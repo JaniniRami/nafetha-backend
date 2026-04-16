@@ -51,3 +51,6 @@ services:
 networks:
   nafetha:
     driver: bridge
+  postgres_net:        # Define the external network here
+    name: postgres_default
+    external: true
