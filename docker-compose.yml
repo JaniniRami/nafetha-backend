@@ -44,6 +44,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.admin-ui
+      args:
+        API_BASE_URL: ${API_BASE_URL:-}
     container_name: nafetha-admin-ui
     restart: unless-stopped
     depends_on:
