@@ -162,3 +162,36 @@ class InterestsOut(BaseModel):
 
     interests: list[str]
     has_interests: bool
+
+
+class ScrapedJobOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    company_id: UUID | None
+    job_id: str
+    job_title: str | None
+    company_linkedin_url: str | None
+    posted_date: str | None
+    job_description: str | None
+    linkedin_url: str
+    seed_location: str | None
+    keyword: str | None
+    scraped_at: datetime
+
+
+class ScrapedCompanyOut(BaseModel):
+    """Company row as returned to clients; list endpoint only includes non-blacklisted rows."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    company_name: str
+    linkedin_url: str
+    blacklisted: bool
+    industry: str | None
+    company_size: str | None
+    website: str | None
+    phone: str | None
+    about_us: str | None
+    scraped_at: datetime
