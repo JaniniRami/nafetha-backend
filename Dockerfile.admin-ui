@@ -1,16 +1,21 @@
+# syntax=docker/dockerfile:1
 # Static admin UI on port 5173 (nginx). Proxies /api and /api/v1 to the API service.
+#
+# BuildKit: npm cache is persisted across builds when you use `docker compose build`.
 
 FROM node:22-alpine AS build
 
 WORKDIR /app
 COPY admin-ui/package.json admin-ui/package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 COPY admin-ui .
-# Empty: browser calls same-origin /api → nginx proxies to api:5005
 ENV VITE_API_BASE=
 
-RUN npm run build
+RUN --mount=type=cache,target=/root/.npm \
+    --mount=type=cache,target=/app/node_modules/.cache \
+    npm run build
 
 FROM nginx:alpine
 

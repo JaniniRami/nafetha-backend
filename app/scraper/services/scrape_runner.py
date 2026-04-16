@@ -17,8 +17,8 @@ SCRAPER_ROOT = Path(__file__).resolve().parents[3] / "nafetha-scrapers"
 if str(SCRAPER_ROOT) not in sys.path:
     sys.path.append(str(SCRAPER_ROOT))
 
-from linkedin_scraper.linkedin_scraper import BrowserManager, CompanyScraper, JobScraper, JobSearchScraper  # noqa: E402
-from linkedin_scraper.linkedin_scraper.callbacks import ConsoleCallback, SilentCallback  # noqa: E402
+from linkedin_scraper import BrowserManager, CompanyScraper, JobScraper, JobSearchScraper  # noqa: E402
+from linkedin_scraper.callbacks import ConsoleCallback, SilentCallback  # noqa: E402
 
 from app.config import HEADLESS_MODE
 from app.database import SessionLocal

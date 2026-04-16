@@ -1,5 +1,11 @@
 # Nafetha API (5005) + admin UI (5173) for a VPS.
 #
+# Faster rebuilds (Docker Compose v2 uses BuildKit by default):
+#   • Dockerfiles use cache mounts for pip, npm, and Vite’s cache (Playwright stays in the image layer).
+#   • Only layers after changed files rerun: keep edits in app/ vs requirements.txt in mind.
+#   • Avoid `docker compose build --no-cache` unless you need a clean build.
+#   • Optional registry cache (CI): buildx bake / --cache-to type=registry,...
+#
 # PostgreSQL: not defined here. Point DATABASE_URL at your existing Postgres:
 #   • Same user-defined network as another stack: postgresql://USER:PASS@postgres:5432/DB
 #   • Postgres only on the host: postgresql://USER:PASS@host.docker.internal:5432/DB

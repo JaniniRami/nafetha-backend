@@ -8,7 +8,7 @@ SCRAPER_ROOT = Path(__file__).resolve().parents[3] / "nafetha-scrapers"
 if str(SCRAPER_ROOT) not in sys.path:
     sys.path.append(str(SCRAPER_ROOT))
 
-from linkedin_scraper.linkedin_scraper import (  # noqa: E402
+from linkedin_scraper import (  # noqa: E402
     BrowserManager,
     is_logged_in,
     login_with_credentials,
