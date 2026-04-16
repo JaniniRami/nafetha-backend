@@ -4,9 +4,10 @@ import logging
 from pathlib import Path
 import sys
 
-SCRAPER_ROOT = Path(__file__).resolve().parents[3] / "nafetha-scrapers"
-if str(SCRAPER_ROOT) not in sys.path:
-    sys.path.append(str(SCRAPER_ROOT))
+_SCRAPER_FS_ROOT = Path(__file__).resolve().parents[3] / "nafetha-scrapers"
+_LINKEDIN_DIST = _SCRAPER_FS_ROOT / "linkedin_scraper"
+if _LINKEDIN_DIST.is_dir() and str(_LINKEDIN_DIST) not in sys.path:
+    sys.path.insert(0, str(_LINKEDIN_DIST))
 
 from linkedin_scraper import (  # noqa: E402
     BrowserManager,

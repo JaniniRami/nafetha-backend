@@ -13,9 +13,12 @@ logger = logging.getLogger(__name__)
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 
-SCRAPER_ROOT = Path(__file__).resolve().parents[3] / "nafetha-scrapers"
-if str(SCRAPER_ROOT) not in sys.path:
-    sys.path.append(str(SCRAPER_ROOT))
+# Repo vendored package lives under nafetha-scrapers/linkedin_scraper/ (inner linkedin_scraper/ is the import root).
+# Prepend so it wins over a global conda/pip ``linkedin_scraper`` that may differ or be a namespace stub.
+_SCRAPER_FS_ROOT = Path(__file__).resolve().parents[3] / "nafetha-scrapers"
+_LINKEDIN_DIST = _SCRAPER_FS_ROOT / "linkedin_scraper"
+if _LINKEDIN_DIST.is_dir() and str(_LINKEDIN_DIST) not in sys.path:
+    sys.path.insert(0, str(_LINKEDIN_DIST))
 
 from linkedin_scraper import BrowserManager, CompanyScraper, JobScraper, JobSearchScraper  # noqa: E402
 from linkedin_scraper.callbacks import ConsoleCallback, SilentCallback  # noqa: E402
