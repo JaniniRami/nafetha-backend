@@ -31,6 +31,7 @@ services:
       - ./nafetha-scrapers:/app/nafetha-scrapers
     networks:
       - nafetha
+      - postgres_net
     # Linux: reach Postgres on the VPS host from the container
     extra_hosts:
       - "host.docker.internal:host-gateway"
