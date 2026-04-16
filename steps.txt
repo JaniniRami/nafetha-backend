@@ -1,0 +1,2 @@
+- open ssh session tunnel for database
+ssh -L 5433:localhost:5432 ramij@46.225.168.215

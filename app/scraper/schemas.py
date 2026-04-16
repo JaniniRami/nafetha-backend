@@ -73,6 +73,10 @@ class JobProgress(BaseModel):
     companies_discovered: int = 0
     companies_scraped: int = 0
     last_message: str = "Queued"
+    logs: list[str] = Field(
+        default_factory=list,
+        description="Timestamped progress lines for this job (most recent at the end).",
+    )
 
 
 class JobStatusResponse(BaseModel):

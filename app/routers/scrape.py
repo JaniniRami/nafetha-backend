@@ -1,7 +1,9 @@
 """Scraping API routes."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.deps import require_superadmin
+from app.models import User
 from app.scraper.job_manager import job_manager
 from app.scraper.schemas import (
     ImportUrlResult,
@@ -17,7 +19,10 @@ router = APIRouter(prefix="/api/v1/linkedin_scrape", tags=["linkedin_scrape"])
 
 
 @router.post("", response_model=StartJobResponse, status_code=status.HTTP_202_ACCEPTED)
-async def start_scrape(request: ScrapeRequest) -> StartJobResponse:
+async def start_scrape(
+    request: ScrapeRequest,
+    _: User = Depends(require_superadmin),
+) -> StartJobResponse:
     """
     Start a LinkedIn scrape job.
 
@@ -29,12 +34,12 @@ async def start_scrape(request: ScrapeRequest) -> StartJobResponse:
 
 
 @router.get("", response_model=list[JobStatusResponse])
-async def list_jobs() -> list[JobStatusResponse]:
+async def list_jobs(_: User = Depends(require_superadmin)) -> list[JobStatusResponse]:
     return await job_manager.list_jobs()
 
 
 @router.get("/{job_id}", response_model=JobStatusResponse)
-async def get_job(job_id: str) -> JobStatusResponse:
+async def get_job(job_id: str, _: User = Depends(require_superadmin)) -> JobStatusResponse:
     job = await job_manager.get_job(job_id)
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
@@ -42,7 +47,7 @@ async def get_job(job_id: str) -> JobStatusResponse:
 
 
 @router.post("/{job_id}/cancel", response_model=JobStatusResponse)
-async def cancel_job(job_id: str) -> JobStatusResponse:
+async def cancel_job(job_id: str, _: User = Depends(require_superadmin)) -> JobStatusResponse:
     job = await job_manager.cancel_job(job_id)
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
@@ -50,7 +55,10 @@ async def cancel_job(job_id: str) -> JobStatusResponse:
 
 
 @router.post("/import-urls", response_model=ImportUrlsResponse, status_code=status.HTTP_200_OK)
-async def import_urls(request: ImportUrlsRequest) -> ImportUrlsResponse:
+async def import_urls(
+    request: ImportUrlsRequest,
+    _: User = Depends(require_superadmin),
+) -> ImportUrlsResponse:
     """
     Scrape and persist specific LinkedIn job URLs directly.
 

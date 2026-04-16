@@ -1,5 +1,7 @@
 """In-memory background job manager for scraping jobs."""
 
+from __future__ import annotations
+
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -10,6 +12,15 @@ from app.scraper.schemas import JobProgress, JobStatusResponse, ScrapeRequest
 from app.scraper.services.scrape_runner import run_scrape_job
 
 JobState = Literal["queued", "running", "completed", "failed", "cancelling", "cancelled"]
+
+_MAX_JOB_LOG_LINES = 2000
+
+
+def _append_job_log(job: ScrapeJob, message: str) -> None:
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    job.log_lines.append(f"[{ts}] {message}")
+    if len(job.log_lines) > _MAX_JOB_LOG_LINES:
+        del job.log_lines[: len(job.log_lines) - _MAX_JOB_LOG_LINES]
 
 
 @dataclass
@@ -26,8 +37,10 @@ class ScrapeJob:
     error: str | None = None
     cancel_requested: bool = False
     task: asyncio.Task | None = None
+    log_lines: list[str] = field(default_factory=list)
 
     def to_response(self) -> JobStatusResponse:
+        progress = self.progress.model_copy(update={"logs": list(self.log_lines)})
         return JobStatusResponse(
             id=self.id,
             status=self.status,
@@ -35,7 +48,7 @@ class ScrapeJob:
             started_at=self.started_at,
             completed_at=self.completed_at,
             request=self.request,
-            progress=self.progress,
+            progress=progress,
             output_jobs_xlsx=self.output_jobs_xlsx,
             output_companies_xlsx=self.output_companies_xlsx,
             error=self.error,
@@ -51,6 +64,7 @@ class JobManager:
         job = ScrapeJob(id=str(uuid4()), request=request)
         async with self._lock:
             self._jobs[job.id] = job
+            _append_job_log(job, "Job queued")
             job.task = asyncio.create_task(self._run_job(job.id), name=f"scrape-job-{job.id}")
         return job
 
@@ -74,6 +88,7 @@ class JobManager:
             job.cancel_requested = True
             job.status = "cancelling"
             job.progress.last_message = "Cancellation requested"
+            _append_job_log(job, "Cancellation requested")
             if job.task and not job.task.done():
                 job.task.cancel()
             return job
@@ -86,6 +101,7 @@ class JobManager:
         job.status = "running"
         job.started_at = datetime.now(timezone.utc)
         job.progress.last_message = "Running"
+        _append_job_log(job, "Running")
 
         async def update_progress(
             *,
@@ -117,6 +133,7 @@ class JobManager:
                 job.progress.companies_scraped += companies_scraped
             if last_message:
                 job.progress.last_message = last_message
+                _append_job_log(job, last_message)
 
         def is_cancel_requested() -> bool:
             return job.cancel_requested
@@ -140,10 +157,12 @@ class JobManager:
         except asyncio.CancelledError:
             job.status = "cancelled"
             job.progress.last_message = "Cancelled"
+            _append_job_log(job, "Cancelled")
         except Exception as exc:  # pragma: no cover
             job.status = "failed"
             job.error = str(exc)
             job.progress.last_message = "Failed"
+            _append_job_log(job, f"Failed: {exc}")
         finally:
             job.completed_at = datetime.now(timezone.utc)
 

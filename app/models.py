@@ -42,6 +42,7 @@ class User(Base):
     profile: Mapped["UserProfile | None"] = relationship(
         back_populates="user",
         uselist=False,
+        cascade="all, delete-orphan",
     )
 
 
@@ -91,7 +92,10 @@ class UserProfile(Base):
         nullable=False,
     )
 
-    user: Mapped[User] = relationship(back_populates="profile")
+    user: Mapped[User] = relationship(
+        back_populates="profile",
+        passive_deletes=True,
+    )
     interest_rows: Mapped[list["ProfileInterest"]] = relationship(
         back_populates="profile",
         cascade="all, delete-orphan",
@@ -152,7 +156,7 @@ class ScrapedCompany(Base):
 
     id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     company_name: Mapped[str] = mapped_column(String(512), unique=True, index=True, nullable=False)
-    linkedin_url: Mapped[str] = mapped_column(String(1024), unique=True, index=True, nullable=False)
+    linkedin_url: Mapped[str | None] = mapped_column(String(1024), unique=True, index=True, nullable=True)
     blacklisted: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
@@ -169,3 +173,115 @@ class ScrapedCompany(Base):
         server_default=func.now(),
         nullable=False,
     )
+
+
+class Community(Base):
+    __tablename__ = "communities"
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    website: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    created_by_user_id: Mapped[PyUUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    events: Mapped[list["CommunityEvent"]] = relationship(
+        back_populates="community",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    subscriptions: Mapped[list["UserCommunitySubscription"]] = relationship(
+        back_populates="community",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class CommunityEvent(Base):
+    __tablename__ = "community_events"
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    community_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("communities.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    event_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    location: Mapped[str] = mapped_column(String(1024), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    website: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    community: Mapped[Community] = relationship(back_populates="events")
+    favorites: Mapped[list["UserCommunityEventFavorite"]] = relationship(
+        back_populates="event",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class UserCommunitySubscription(Base):
+    __tablename__ = "user_community_subscriptions"
+    __table_args__ = (UniqueConstraint("user_id", "community_id", name="uq_user_community_subscription"),)
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    community_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("communities.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    community: Mapped[Community] = relationship(back_populates="subscriptions")
+
+
+class UserCommunityEventFavorite(Base):
+    __tablename__ = "user_community_event_favorites"
+    __table_args__ = (UniqueConstraint("user_id", "event_id", name="uq_user_community_event_favorite"),)
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    event_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("community_events.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    event: Mapped[CommunityEvent] = relationship(back_populates="favorites")

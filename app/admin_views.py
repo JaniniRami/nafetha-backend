@@ -5,6 +5,7 @@ from sqladmin.authentication import AuthenticationBackend
 from sqladmin.fields import SelectField as AdminSelectField
 from starlette.requests import Request
 from wtforms.fields import PasswordField
+from wtforms.validators import Optional
 
 from app.config import ADMIN_PASSWORD, ADMIN_SECRET_KEY, ADMIN_USERNAME
 from app.models import (
@@ -40,8 +41,8 @@ class UserRoleSelectField(AdminSelectField):
 class AdminAuth(AuthenticationBackend):
     def __init__(self) -> None:
         super().__init__(secret_key=ADMIN_SECRET_KEY)
-        self._username = ADMIN_USERNAME or ""
-        self._password = ADMIN_PASSWORD or ""
+        self._username = ADMIN_USERNAME
+        self._password = ADMIN_PASSWORD
 
     async def login(self, request: Request) -> bool:
         form = await request.form()
@@ -60,10 +61,9 @@ class AdminAuth(AuthenticationBackend):
         return bool(request.session.get("admin_authenticated"))
 
 
-def build_authentication_backend() -> AdminAuth | None:
-    if ADMIN_USERNAME and ADMIN_PASSWORD:
-        return AdminAuth()
-    return None
+def build_authentication_backend() -> AdminAuth:
+    """SQLAdmin always uses session login (credentials from config)."""
+    return AdminAuth()
 
 
 class UserAdmin(ModelView, model=User):
@@ -78,6 +78,15 @@ class UserAdmin(ModelView, model=User):
     form_overrides = {
         "password_hash": PasswordField,
         "role": UserRoleSelectField,
+    }
+    form_args = {
+        "password_hash": {
+            "validators": [Optional()],
+            "description": "Leave blank when editing to keep the current password.",
+        },
+        "role": {
+            "description": "Choose Superadmin for access to /api/admin/* and the React admin UI.",
+        },
     }
     column_labels = {User.password_hash: "Password"}
 

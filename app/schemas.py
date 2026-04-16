@@ -187,7 +187,7 @@ class ScrapedCompanyOut(BaseModel):
 
     id: UUID
     company_name: str
-    linkedin_url: str
+    linkedin_url: str | None
     blacklisted: bool
     industry: str | None
     company_size: str | None
@@ -195,3 +195,274 @@ class ScrapedCompanyOut(BaseModel):
     phone: str | None
     about_us: str | None
     scraped_at: datetime
+
+
+class ScrapedCompanyCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_name: str = Field(min_length=1, max_length=512)
+    linkedin_url: str | None = Field(default=None, max_length=1024)
+    blacklisted: bool = False
+    industry: str | None = Field(default=None, max_length=255)
+    company_size: str | None = Field(default=None, max_length=255)
+    website: str | None = Field(default=None, max_length=1024)
+    phone: str | None = Field(default=None, max_length=255)
+    about_us: str | None = None
+
+    @field_validator("company_name", mode="before")
+    @classmethod
+    def strip_company_name(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("linkedin_url", mode="before")
+    @classmethod
+    def linkedin_url_strip_or_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
+        return v
+
+
+class ScrapedCompanyUpdate(BaseModel):
+    """Partial update for admin-managed scraped companies."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    company_name: str | None = Field(default=None, min_length=1, max_length=512)
+    linkedin_url: str | None = Field(default=None, max_length=1024)
+    blacklisted: bool | None = None
+    industry: str | None = Field(default=None, max_length=255)
+    company_size: str | None = Field(default=None, max_length=255)
+    website: str | None = Field(default=None, max_length=1024)
+    phone: str | None = Field(default=None, max_length=255)
+    about_us: str | None = None
+
+    @field_validator("company_name", mode="before")
+    @classmethod
+    def strip_company_name(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("linkedin_url", mode="before")
+    @classmethod
+    def linkedin_url_strip_or_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
+        return v
+
+
+class ScrapedJobUpdate(BaseModel):
+    """Partial update for admin-managed scraped jobs."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: str | None = Field(default=None, max_length=64)
+    linkedin_url: str | None = Field(default=None, min_length=1, max_length=1024)
+    company_id: UUID | None = None
+    job_title: str | None = Field(default=None, max_length=512)
+    company_linkedin_url: str | None = Field(default=None, max_length=1024)
+    posted_date: str | None = Field(default=None, max_length=255)
+    job_description: str | None = None
+    seed_location: str | None = Field(default=None, max_length=255)
+    keyword: str | None = Field(default=None, max_length=255)
+
+    @field_validator("job_id", mode="before")
+    @classmethod
+    def job_id_strip_or_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
+        return v
+
+    @field_validator("linkedin_url", mode="before")
+    @classmethod
+    def linkedin_url_strip(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+
+class ScrapedJobCreate(BaseModel):
+    """Admin create body. ``job_id`` is optional; the server assigns a unique external id when omitted."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: str | None = Field(default=None, max_length=64)
+    linkedin_url: str = Field(min_length=1, max_length=1024)
+    company_id: UUID | None = None
+    job_title: str | None = Field(default=None, max_length=512)
+    company_linkedin_url: str | None = Field(default=None, max_length=1024)
+    posted_date: str | None = Field(default=None, max_length=255)
+    job_description: str | None = None
+    seed_location: str | None = Field(default=None, max_length=255)
+    keyword: str | None = Field(default=None, max_length=255)
+
+    @field_validator("job_id", mode="before")
+    @classmethod
+    def job_id_strip_or_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
+        return v
+
+
+class CommunityOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    description: str
+    website: str | None
+    created_by_user_id: UUID | None
+    created_at: datetime
+
+
+class CommunityCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=255)
+    description: str = Field(default="", max_length=50_000)
+    website: str | None = Field(default=None, max_length=1024)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("website", mode="before")
+    @classmethod
+    def website_strip_or_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
+        return v
+
+
+class CommunityUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=50_000)
+    website: str | None = Field(default=None, max_length=1024)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("website", mode="before")
+    @classmethod
+    def website_strip_or_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
+        return v
+
+
+class CommunityEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    community_id: UUID
+    name: str
+    event_at: datetime
+    location: str
+    description: str
+    website: str | None
+    created_at: datetime
+
+
+class CommunityEventCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=255)
+    event_at: datetime
+    location: str = Field(min_length=1, max_length=1024)
+    description: str = Field(default="", max_length=50_000)
+    website: str | None = Field(default=None, max_length=1024)
+
+    @field_validator("name", "location", mode="before")
+    @classmethod
+    def strip_strings(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("website", mode="before")
+    @classmethod
+    def website_strip_or_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
+        return v
+
+
+class CommunityEventUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    event_at: datetime | None = None
+    location: str | None = Field(default=None, min_length=1, max_length=1024)
+    description: str | None = Field(default=None, max_length=50_000)
+    website: str | None = Field(default=None, max_length=1024)
+
+    @field_validator("name", "location", mode="before")
+    @classmethod
+    def strip_strings(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("website", mode="before")
+    @classmethod
+    def website_strip_or_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
+        return v
+
+
+class SubscriptionStateOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    community_id: UUID
+    subscribed: bool
+
+
+class FavoriteStateOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    event_id: UUID
+    favorited: bool

@@ -25,8 +25,10 @@ from app.config import (
     SESSION_SECRET_KEY,
 )
 from app.database import SessionLocal, engine
+from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
 from app.routers.catalog import router as catalog_router
+from app.routers.communities import router as communities_router
 from app.routers.profile import router as profile_router
 from app.routers.scrape import router as scrape_router
 
@@ -67,6 +69,8 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
 app.include_router(catalog_router, prefix="/api")
+app.include_router(communities_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
 app.include_router(scrape_router)
 
 admin = Admin(

@@ -35,8 +35,10 @@ SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "nafetha_session")
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "").lower() in ("1", "true", "yes")
 
 ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", "change-me-use-a-long-random-secret")
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+# SQLAdmin browser UI at `/admin` (panel login, not app JWT users). Defaults suit local dev;
+# set both in production (or rely on a strong ADMIN_PASSWORD only).
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
 
 # Playwright: true = headless (servers/CI); false/unset = visible browser (LinkedIn demos).
 HEADLESS_MODE = os.getenv("HEADLESS_MODE", "").lower() in ("1", "true", "yes")
