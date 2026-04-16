@@ -1,7 +1,7 @@
-# Nafetha API (5005) + admin UI (5173) for a VPS.
+# Nafetha API + admin UI behind Nginx Proxy Manager (80/443/81) on a VPS.
 #
 # Faster rebuilds (Docker Compose v2 uses BuildKit by default):
-#   • Dockerfiles use cache mounts for pip, npm, and Vite’s cache (Playwright stays in the image layer).
+#   • Cache mounts: pip, npm, Vite; Playwright Chromium downloads reuse /root/.cache/pw-playwright then copy into the image.
 #   • Only layers after changed files rerun: keep edits in app/ vs requirements.txt in mind.
 #   • Avoid `docker compose build --no-cache` unless you need a clean build.
 #   • Optional registry cache (CI): buildx bake / --cache-to type=registry,...
@@ -28,8 +28,6 @@ services:
       dockerfile: Dockerfile.api
     container_name: nafetha-api
     restart: unless-stopped
-    ports:
-      - "5005:5005"
     env_file:
       - .env
     # Persist LinkedIn session.json and scraper output; requires this repo path on the host
@@ -48,10 +46,22 @@ services:
       dockerfile: Dockerfile.admin-ui
     container_name: nafetha-admin-ui
     restart: unless-stopped
-    ports:
-      - "5173:5173"
     depends_on:
       - api
+    networks:
+      - nafetha
+
+  nginx-proxy-manager:
+    image: "jc21/nginx-proxy-manager:latest"
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      - "80:80" # Public HTTP (Cloudflare talks to this)
+      - "443:443" # Public HTTPS
+      - "81:81" # The NPM Admin Dashboard
+    volumes:
+      - ./npm-data:/data
+      - ./npm-letsencrypt:/etc/letsencrypt
     networks:
       - nafetha
 
