@@ -9,3 +9,4 @@ sqladmin>=0.20.0
 email-validator>=2.2.0
 PyJWT>=2.8.0
 openpyxl>=3.1.0
+itsdangerous>=2.2.0
