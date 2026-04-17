@@ -353,4 +353,4 @@ vite.config.ts.timestamp-*
 
 .DS_Store
 
-.session.json
+session.json
