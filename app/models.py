@@ -168,6 +168,8 @@ class ScrapedCompany(Base):
     website: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(255), nullable=True)
     about_us: Mapped[str | None] = mapped_column(Text, nullable=True)
+    displayed_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    displayed_keywords: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     scraped_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

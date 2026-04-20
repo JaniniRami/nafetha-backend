@@ -1,17 +1,30 @@
 """Superadmin JSON API for managing scraped companies and jobs."""
 
+import asyncio
+from datetime import datetime, timezone
+from pathlib import Path
 import re
+from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.config import HEADLESS_MODE
 from app.database import get_db
+from app.database import SessionLocal
 from app.deps import require_superadmin
 from app.models import ScrapedCompany, ScrapedJob, User
+from app.scraper.config import DEFAULT_SESSION_PATH
+from app.scraper.services.auth import BrowserManager, ensure_authenticated_session
 from app.schemas import (
+    CompanyAboutBackfillRequest,
+    CompanyAboutBackfillResponse,
+    CompanyAboutBackfillJobQueued,
+    CompanyAboutBackfillJobStatus,
+    CompanyAboutBackfillRowResult,
     ScrapedCompanyCreate,
     ScrapedCompanyOut,
     ScrapedCompanyUpdate,
@@ -21,6 +34,60 @@ from app.schemas import (
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+_about_backfill_jobs: dict[str, CompanyAboutBackfillJobStatus] = {}
+
+
+def _is_linkedin_url(value: str | None) -> bool:
+    if not value:
+        return False
+    try:
+        host = (urlparse(value).hostname or "").lower()
+    except Exception:
+        return False
+    return host == "linkedin.com" or host.endswith(".linkedin.com")
+
+
+def _normalize_text(text: str, *, max_chars: int = 2000) -> str:
+    compact = re.sub(r"\s+", " ", text).strip()
+    if not compact:
+        return ""
+    return compact[:max_chars]
+
+
+async def _fetch_with_browser(url: str, *, require_linkedin_auth: bool) -> tuple[str | None, str | None]:
+    try:
+        async with BrowserManager(headless=HEADLESS_MODE) as browser:
+            if require_linkedin_auth:
+                await ensure_authenticated_session(browser, Path(DEFAULT_SESSION_PATH).resolve())
+            await browser.page.goto(url, wait_until="domcontentloaded")
+            await browser.page.wait_for_timeout(1500)
+            page_text = await browser.page.evaluate(
+                """
+                () => {
+                  const selectors = [
+                    "script","style","noscript","svg","template","iframe",
+                    "header","footer","nav","aside",
+                    '[id*="cookie" i]','[class*="cookie" i]',
+                    '[id*="consent" i]','[class*="consent" i]',
+                    '[id*="banner" i]','[class*="banner" i]',
+                    '[id*="modal" i]','[class*="modal" i]',
+                    '[id*="popup" i]','[class*="popup" i]'
+                  ];
+                  selectors.forEach((sel) => {
+                    document.querySelectorAll(sel).forEach((el) => el.remove());
+                  });
+                  return (document.body && document.body.innerText) ? document.body.innerText : "";
+                }
+                """
+            )
+    except Exception as exc:
+        return None, f"browser_fetch_failed:{exc}"
+
+    text = _normalize_text(str(page_text or ""))
+    if not text:
+        return None, "empty_content_after_cleanup"
+    return text, None
 
 
 def _generate_job_external_id() -> str:
@@ -156,6 +223,8 @@ def admin_create_company(
         website=payload.website,
         phone=payload.phone,
         about_us=payload.about_us,
+        displayed_description=payload.displayed_description,
+        displayed_keywords=payload.displayed_keywords,
     )
     db.add(row)
     try:
@@ -229,6 +298,10 @@ def admin_update_company(
         row.phone = data["phone"]
     if "about_us" in data:
         row.about_us = data["about_us"]
+    if "displayed_description" in data:
+        row.displayed_description = data["displayed_description"]
+    if "displayed_keywords" in data:
+        row.displayed_keywords = data["displayed_keywords"]
 
     try:
         db.commit()
@@ -259,6 +332,192 @@ def admin_delete_company(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
     db.delete(row)
     db.commit()
+
+
+def _build_company_backfill_query(payload: CompanyAboutBackfillRequest):
+    stmt = select(ScrapedCompany).order_by(ScrapedCompany.scraped_at.desc())
+    if payload.company_ids:
+        stmt = stmt.where(ScrapedCompany.id.in_(payload.company_ids))
+    elif payload.only_missing:
+        stmt = stmt.where(
+            or_(
+                ScrapedCompany.about_us.is_(None),
+                func.length(func.trim(ScrapedCompany.about_us)) == 0,
+            )
+        )
+    if not payload.company_ids and payload.limit is not None:
+        stmt = stmt.limit(payload.limit)
+    return stmt
+
+
+async def _run_company_about_backfill(
+    db: Session,
+    payload: CompanyAboutBackfillRequest,
+) -> CompanyAboutBackfillResponse:
+    stmt = _build_company_backfill_query(payload)
+    rows = list(db.scalars(stmt).all())
+    results: list[CompanyAboutBackfillRowResult] = []
+    updated = 0
+    skipped = 0
+    failed = 0
+
+    for row in rows:
+        preferred_source_url = (row.linkedin_url or "").strip() or (row.website or "").strip() or None
+        if payload.only_missing and row.about_us and row.about_us.strip():
+            skipped += 1
+            results.append(
+                CompanyAboutBackfillRowResult(
+                    company_id=row.id,
+                    company_name=row.company_name,
+                    source_url=preferred_source_url,
+                    status="skipped",
+                    reason="already_has_about",
+                )
+            )
+            continue
+
+        linkedin_url = (row.linkedin_url or "").strip()
+        website_url = (row.website or "").strip()
+        if not linkedin_url and not website_url:
+            skipped += 1
+            results.append(
+                CompanyAboutBackfillRowResult(
+                    company_id=row.id,
+                    company_name=row.company_name,
+                    source_url=None,
+                    status="skipped",
+                    reason="missing_source_url",
+                )
+            )
+            continue
+
+        source_url: str | None = None
+        text: str | None = None
+        errors: list[str] = []
+
+        if linkedin_url:
+            text, err = await _fetch_with_browser(
+                linkedin_url,
+                require_linkedin_auth=_is_linkedin_url(linkedin_url),
+            )
+            if text:
+                source_url = linkedin_url
+            elif err:
+                errors.append(f"linkedin_url:{err}")
+
+        if text is None and website_url:
+            text, err = await _fetch_with_browser(
+                website_url,
+                require_linkedin_auth=_is_linkedin_url(website_url),
+            )
+            if text:
+                source_url = website_url
+            elif err:
+                errors.append(f"website:{err}")
+
+        if not text:
+            failed += 1
+            results.append(
+                CompanyAboutBackfillRowResult(
+                    company_id=row.id,
+                    company_name=row.company_name,
+                    source_url=preferred_source_url,
+                    status="failed",
+                    reason="; ".join(errors) if errors else "unknown_error",
+                )
+            )
+            continue
+
+        row.about_us = text
+        updated += 1
+        results.append(
+            CompanyAboutBackfillRowResult(
+                company_id=row.id,
+                company_name=row.company_name,
+                source_url=source_url,
+                status="updated",
+                saved_chars=len(text),
+            )
+        )
+
+    if updated:
+        db.commit()
+
+    return CompanyAboutBackfillResponse(
+        processed=len(rows),
+        updated=updated,
+        skipped=skipped,
+        failed=failed,
+        results=results,
+    )
+
+
+async def _run_company_about_backfill_job(job_id: str) -> None:
+    job = _about_backfill_jobs.get(job_id)
+    if job is None:
+        return
+    job.status = "running"
+    job.started_at = datetime.now(timezone.utc)
+
+    payload = CompanyAboutBackfillRequest(
+        company_ids=job.company_ids,
+        only_missing=job.only_missing,
+        limit=job.limit,
+    )
+    db = SessionLocal()
+    try:
+        result = await _run_company_about_backfill(db, payload)
+        job.processed = result.processed
+        job.updated = result.updated
+        job.skipped = result.skipped
+        job.failed = result.failed
+        job.status = "completed"
+        job.completed_at = datetime.now(timezone.utc)
+    except Exception as exc:
+        db.rollback()
+        job.status = "failed"
+        job.error = str(exc)
+        job.completed_at = datetime.now(timezone.utc)
+    finally:
+        db.close()
+
+
+@router.post("/companies/backfill-about", response_model=CompanyAboutBackfillResponse)
+async def admin_backfill_company_about(
+    payload: CompanyAboutBackfillRequest,
+    _: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> CompanyAboutBackfillResponse:
+    return await _run_company_about_backfill(db, payload)
+
+
+@router.post("/companies/backfill-about/jobs", response_model=CompanyAboutBackfillJobQueued)
+async def admin_enqueue_company_about_backfill(
+    payload: CompanyAboutBackfillRequest,
+    _: User = Depends(require_superadmin),
+) -> CompanyAboutBackfillJobQueued:
+    job_id = str(uuid4())
+    _about_backfill_jobs[job_id] = CompanyAboutBackfillJobStatus(
+        job_id=job_id,
+        status="queued",
+        only_missing=payload.only_missing,
+        company_ids=list(payload.company_ids),
+        limit=payload.limit,
+        created_at=datetime.now(timezone.utc),
+    )
+    asyncio.create_task(_run_company_about_backfill_job(job_id))
+    return CompanyAboutBackfillJobQueued(job_id=job_id, status="queued")
+
+
+@router.get("/companies/backfill-about/jobs/{job_id}", response_model=CompanyAboutBackfillJobStatus)
+def admin_get_company_about_backfill_job(
+    job_id: str,
+    _: User = Depends(require_superadmin),
+) -> CompanyAboutBackfillJobStatus:
+    job = _about_backfill_jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backfill job not found")
+    return job
 
 
 @router.get("/jobs", response_model=list[ScrapedJobOut])

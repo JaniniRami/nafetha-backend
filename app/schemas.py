@@ -194,6 +194,8 @@ class ScrapedCompanyOut(BaseModel):
     website: str | None
     phone: str | None
     about_us: str | None
+    displayed_description: str | None
+    displayed_keywords: str | None
     scraped_at: datetime
 
 
@@ -208,6 +210,8 @@ class ScrapedCompanyCreate(BaseModel):
     website: str | None = Field(default=None, max_length=1024)
     phone: str | None = Field(default=None, max_length=255)
     about_us: str | None = None
+    displayed_description: str | None = None
+    displayed_keywords: str | None = Field(default=None, max_length=1024)
 
     @field_validator("company_name", mode="before")
     @classmethod
@@ -224,6 +228,25 @@ class ScrapedCompanyCreate(BaseModel):
         if isinstance(v, str):
             s = v.strip()
             return s if s else None
+        return v
+
+    @field_validator("displayed_keywords", mode="before")
+    @classmethod
+    def displayed_keywords_strip_or_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
+        return v
+
+    @field_validator("displayed_keywords")
+    @classmethod
+    def validate_displayed_keywords(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if " " in v:
+            raise ValueError("displayed_keywords must be comma-separated with no spaces")
         return v
 
 
@@ -240,6 +263,8 @@ class ScrapedCompanyUpdate(BaseModel):
     website: str | None = Field(default=None, max_length=1024)
     phone: str | None = Field(default=None, max_length=255)
     about_us: str | None = None
+    displayed_description: str | None = None
+    displayed_keywords: str | None = Field(default=None, max_length=1024)
 
     @field_validator("company_name", mode="before")
     @classmethod
@@ -259,6 +284,85 @@ class ScrapedCompanyUpdate(BaseModel):
             s = v.strip()
             return s if s else None
         return v
+
+    @field_validator("displayed_keywords", mode="before")
+    @classmethod
+    def displayed_keywords_strip_or_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
+        return v
+
+    @field_validator("displayed_keywords")
+    @classmethod
+    def validate_displayed_keywords(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if " " in v:
+            raise ValueError("displayed_keywords must be comma-separated with no spaces")
+        return v
+
+
+class CompanyAboutBackfillRequest(BaseModel):
+    """Backfill company about text from website/linkedin pages."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    company_ids: list[UUID] = Field(
+        default_factory=list,
+        max_length=500,
+        description="Optional explicit set of company ids to process.",
+    )
+    only_missing: bool = Field(
+        default=True,
+        description="When true, skip rows that already have non-empty about_us.",
+    )
+    limit: int | None = Field(
+        default=None,
+        ge=1,
+        le=1000,
+        description="Optional max rows to process (applies only when company_ids is empty).",
+    )
+
+
+class CompanyAboutBackfillRowResult(BaseModel):
+    company_id: UUID
+    company_name: str
+    source_url: str | None
+    status: str
+    reason: str | None = None
+    saved_chars: int | None = None
+
+
+class CompanyAboutBackfillResponse(BaseModel):
+    processed: int
+    updated: int
+    skipped: int
+    failed: int
+    results: list[CompanyAboutBackfillRowResult]
+
+
+class CompanyAboutBackfillJobQueued(BaseModel):
+    job_id: str
+    status: str
+
+
+class CompanyAboutBackfillJobStatus(BaseModel):
+    job_id: str
+    status: str
+    only_missing: bool
+    company_ids: list[UUID]
+    limit: int | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    processed: int = 0
+    updated: int = 0
+    skipped: int = 0
+    failed: int = 0
+    error: str | None = None
 
 
 class ScrapedJobUpdate(BaseModel):

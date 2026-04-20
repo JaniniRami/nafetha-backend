@@ -49,7 +49,47 @@ export type Company = {
   website: string | null;
   phone: string | null;
   about_us: string | null;
+  displayed_description: string | null;
+  displayed_keywords: string | null;
   scraped_at: string;
+};
+
+export type CompanyAboutBackfillRowResult = {
+  company_id: string;
+  company_name: string;
+  source_url: string | null;
+  status: string;
+  reason: string | null;
+  saved_chars: number | null;
+};
+
+export type CompanyAboutBackfillResponse = {
+  processed: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  results: CompanyAboutBackfillRowResult[];
+};
+
+export type CompanyAboutBackfillJobQueued = {
+  job_id: string;
+  status: string;
+};
+
+export type CompanyAboutBackfillJobStatus = {
+  job_id: string;
+  status: string;
+  only_missing: boolean;
+  company_ids: string[];
+  limit: number | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  processed: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  error: string | null;
 };
 
 export type Job = {
