@@ -139,3 +139,40 @@ class ImportUrlsResponse(BaseModel):
     skipped: int
     errors: int
     results: list[ImportUrlResult]
+
+
+class TanqeebSearchImportRequest(BaseModel):
+    """Run Tanqeeb search pagination + job pages, then persist to ``jobs``."""
+
+    search_url: str | None = Field(
+        default=None,
+        description="Full Tanqeeb search URL; omit to use scraper default.",
+    )
+    timeout_seconds: int = Field(
+        default=20,
+        ge=5,
+        le=120,
+        description="HTTP timeout per request when fetching Tanqeeb pages.",
+    )
+
+
+class TanqeebImportUrlsRequest(BaseModel):
+    """Scrape explicit Tanqeeb job detail URLs and persist."""
+
+    urls: list[str] = Field(
+        min_length=1,
+        description="Tanqeeb job page URLs, e.g. https://jordan.tanqeeb.com/jobs-in-jordan/all/jobs/020916285.html",
+    )
+    timeout_seconds: int = Field(default=20, ge=5, le=120)
+
+    @field_validator("urls")
+    @classmethod
+    def validate_tanqeeb_urls(cls, value: list[str]) -> list[str]:
+        cleaned = [u.strip() for u in value if u.strip()]
+        invalid = [u for u in cleaned if "tanqeeb.com" not in u.lower() or ".html" not in u.lower()]
+        if invalid:
+            raise ValueError(
+                "All URLs must be Tanqeeb job HTML pages (tanqeeb.com host and .html path). "
+                f"Invalid: {invalid}"
+            )
+        return cleaned

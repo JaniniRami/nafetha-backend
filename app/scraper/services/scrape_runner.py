@@ -276,11 +276,9 @@ async def import_job_urls(
                     company_id=company_id,
                     job_id=job_id,
                     job_title=job.job_title,
-                    company_linkedin_url=job.company_linkedin_url,
                     posted_date=job.posted_date,
                     job_description=job.job_description,
                     linkedin_url=linkedin_url,
-                    seed_location=None,
                     keyword=None,
                 ))
                 try:
@@ -494,11 +492,9 @@ async def run_scrape_job(
                                     company_id=company_id,
                                     job_id=job_id,
                                     job_title=job.job_title,
-                                    company_linkedin_url=job.company_linkedin_url,
                                     posted_date=job.posted_date,
                                     job_description=job.job_description,
                                     linkedin_url=linkedin_url,
-                                    seed_location=location,
                                     keyword=keyword or None,
                                 )
                             )

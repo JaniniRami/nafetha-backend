@@ -197,8 +197,8 @@ class ScrapedJobAdmin(ModelView, model=ScrapedJob):
     column_list = [
         ScrapedJob.job_id,
         ScrapedJob.job_title,
-        ScrapedJob.seed_location,
         ScrapedJob.keyword,
+        ScrapedJob.displayed_keywords,
         ScrapedJob.posted_date,
         ScrapedJob.scraped_at,
     ]
@@ -207,18 +207,18 @@ class ScrapedJobAdmin(ModelView, model=ScrapedJob):
         ScrapedJob.company_id,
         ScrapedJob.job_id,
         ScrapedJob.job_title,
-        ScrapedJob.company_linkedin_url,
         ScrapedJob.posted_date,
         ScrapedJob.job_description,
+        ScrapedJob.extra_details,
         ScrapedJob.linkedin_url,
-        ScrapedJob.seed_location,
         ScrapedJob.keyword,
+        ScrapedJob.displayed_description,
+        ScrapedJob.displayed_keywords,
         ScrapedJob.scraped_at,
     ]
     column_searchable_list = [
         ScrapedJob.job_id,
         ScrapedJob.job_title,
-        ScrapedJob.company_linkedin_url,
         ScrapedJob.linkedin_url,
         ScrapedJob.keyword,
     ]

@@ -5,6 +5,9 @@ import {
   type CompanyAboutBackfillJobQueued,
   type CompanyAboutBackfillJobStatus,
   type CompanyAboutBackfillResponse,
+  type CompanyDisplayAIJobQueued,
+  type CompanyDisplayAIJobStatus,
+  type CompanyDisplayAIResponse,
 } from "../api";
 
 const emptyForm = {
@@ -45,7 +48,9 @@ export default function Companies() {
   const [editForm, setEditForm] = useState(emptyForm);
   const [processingAllMissing, setProcessingAllMissing] = useState(false);
   const [processingAllCompanies, setProcessingAllCompanies] = useState(false);
+  const [processingAllAiDisplay, setProcessingAllAiDisplay] = useState(false);
   const [processingCompanyIds, setProcessingCompanyIds] = useState<Record<string, boolean>>({});
+  const [aiCompanyIds, setAiCompanyIds] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     setError(null);
@@ -157,14 +162,15 @@ export default function Companies() {
     return !(c.about_us ?? "").trim();
   }
 
-  async function runBackfill(companyIds: string[], onlyMissing = true): Promise<CompanyAboutBackfillResponse> {
-    return apiFetch<CompanyAboutBackfillResponse>("/api/admin/companies/backfill-about", {
-      method: "POST",
-      body: JSON.stringify({
-        company_ids: companyIds,
-        only_missing: onlyMissing,
-      }),
-    });
+  function hasAboutForAi(c: Company): boolean {
+    return !!(c.about_us ?? "").trim();
+  }
+
+  /** Matches backend: both displayed fields already set — no point running AI again from this row. */
+  function hasBothDisplayedFields(c: Company): boolean {
+    const d = (c.displayed_description ?? "").trim();
+    const k = (c.displayed_keywords ?? "").trim();
+    return !!(d && k);
   }
 
   async function enqueueBackfillJob(companyIds: string[], onlyMissing: boolean): Promise<CompanyAboutBackfillJobQueued> {
@@ -177,16 +183,77 @@ export default function Companies() {
     });
   }
 
+  /**
+   * Wait until the backfill job finishes. Uses server long-poll (?wait=1) so each HTTP call can
+   * block up to ~55s while the job runs, instead of many short GETs every few seconds.
+   */
   async function pollBackfillJob(jobId: string): Promise<CompanyAboutBackfillJobStatus> {
-    // Poll backend job until completion/failure.
     while (true) {
       const status = await apiFetch<CompanyAboutBackfillJobStatus>(
-        `/api/admin/companies/backfill-about/jobs/${encodeURIComponent(jobId)}`,
+        `/api/admin/companies/backfill-about/jobs/${encodeURIComponent(jobId)}?wait=1`,
       );
       if (status.status === "completed" || status.status === "failed") {
         return status;
       }
-      await new Promise((resolve) => window.setTimeout(resolve, 2000));
+    }
+  }
+
+  async function enqueueDisplayAiJob(
+    companyIds: string[],
+    onlyMissingDisplay: boolean,
+  ): Promise<CompanyDisplayAIJobQueued> {
+    return apiFetch<CompanyDisplayAIJobQueued>("/api/admin/companies/ai-display/jobs", {
+      method: "POST",
+      body: JSON.stringify({
+        company_ids: companyIds,
+        only_missing_display: onlyMissingDisplay,
+      }),
+    });
+  }
+
+  async function pollDisplayAiJob(jobId: string): Promise<CompanyDisplayAIJobStatus> {
+    while (true) {
+      const status = await apiFetch<CompanyDisplayAIJobStatus>(
+        `/api/admin/companies/ai-display/jobs/${encodeURIComponent(jobId)}?wait=1`,
+      );
+      if (status.status === "completed" || status.status === "failed") {
+        return status;
+      }
+    }
+  }
+
+  async function onAiDisplayForCompany(c: Company) {
+    setError(null);
+    setSuccess(null);
+    setAiCompanyIds((prev) => ({ ...prev, [c.id]: true }));
+    try {
+      const result = await apiFetch<CompanyDisplayAIResponse>(
+        `/api/admin/companies/${encodeURIComponent(c.id)}/ai-display`,
+        { method: "POST" },
+      );
+      if (result.saved && result.company) {
+        setError(null);
+        setSuccess("Displayed description and keywords updated from About (AI).");
+        setRows((prev) => prev.map((row) => (row.id === result.company!.id ? result.company! : row)));
+        if (editingId === c.id) {
+          setEditForm(companyToForm(result.company));
+        }
+      } else if (!result.success) {
+        setSuccess(null);
+        setError(
+          "AI did not treat the About text as a real company page (error/CAPTCHA/noise or unclear content). Nothing was saved.",
+        );
+      } else {
+        setSuccess(null);
+        setError("Unexpected AI response; nothing was saved.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI display generation failed");
+    } finally {
+      setAiCompanyIds((prev) => {
+        const { [c.id]: _removed, ...rest } = prev;
+        return rest;
+      });
     }
   }
 
@@ -195,16 +262,18 @@ export default function Companies() {
     setSuccess(null);
     setProcessingCompanyIds((prev) => ({ ...prev, [c.id]: true }));
     try {
-      const result = await runBackfill([c.id], true);
-      const updated = result.updated;
-      const skipped = result.skipped;
-      const failed = result.failed;
-      if (updated > 0) {
-        setSuccess(`Filled About for ${updated} company.`);
-      } else if (skipped > 0) {
+      const result = await apiFetch<CompanyAboutBackfillResponse>(
+        `/api/admin/companies/${encodeURIComponent(c.id)}/backfill-about`,
+        { method: "POST" },
+      );
+      if (result.updated > 0) {
+        setSuccess(`Filled About for ${result.updated} company.`);
+      } else if (result.skipped > 0) {
         setSuccess("Company already has About or could not be updated.");
-      } else if (failed > 0) {
+      } else if (result.failed > 0) {
         setError("Failed to generate About for this company.");
+      } else {
+        setSuccess("Nothing to update.");
       }
       await load();
     } catch (err) {
@@ -258,6 +327,28 @@ export default function Companies() {
       setError(err instanceof Error ? err.message : "Failed while processing all companies");
     } finally {
       setProcessingAllCompanies(false);
+    }
+  }
+
+  async function onQueueAiProcessAll() {
+    setError(null);
+    setSuccess(null);
+    setProcessingAllAiDisplay(true);
+    try {
+      const queued = await enqueueDisplayAiJob([], true);
+      const finalStatus = await pollDisplayAiJob(queued.job_id);
+      if (finalStatus.status === "failed") {
+        setError(finalStatus.error || "AI display queue job failed");
+      } else {
+        setSuccess(
+          `AI display job finished. Processed: ${finalStatus.processed}, updated: ${finalStatus.updated}, skipped: ${finalStatus.skipped}, declined: ${finalStatus.declined}, failed: ${finalStatus.failed}.`,
+        );
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed while running AI display job");
+    } finally {
+      setProcessingAllAiDisplay(false);
     }
   }
 
@@ -360,14 +451,14 @@ export default function Companies() {
       <div className="card">
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
           <h2 style={{ margin: 0 }}>All companies</h2>
-          <button type="button" className="secondary" onClick={() => void load()} disabled={loading}>
+          <button type="button" className="secondary" onClick={() => void load()} disabled={loading || processingAllAiDisplay}>
             Refresh
           </button>
           <button
             type="button"
             className="secondary"
             onClick={() => void onQueueAllMissingAbout()}
-            disabled={loading || processingAllMissing || processingAllCompanies}
+            disabled={loading || processingAllMissing || processingAllCompanies || processingAllAiDisplay}
           >
             {processingAllMissing ? "Processing missing About..." : "Queue Missing About"}
           </button>
@@ -375,9 +466,18 @@ export default function Companies() {
             type="button"
             className="secondary"
             onClick={() => void onQueueAllAbout()}
-            disabled={loading || processingAllMissing || processingAllCompanies}
+            disabled={loading || processingAllMissing || processingAllCompanies || processingAllAiDisplay}
           >
             {processingAllCompanies ? "Processing all About..." : "Queue All About"}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => void onQueueAiProcessAll()}
+            disabled={loading || processingAllMissing || processingAllCompanies || processingAllAiDisplay}
+            title="Companies with About where both displayed description and displayed keywords are empty."
+          >
+            {processingAllAiDisplay ? "AI processing…" : "AI Process All"}
           </button>
         </div>
         {loading ? (
@@ -425,11 +525,39 @@ export default function Companies() {
                             className="btn-sm secondary"
                             onClick={() => void onFillAboutForCompany(c)}
                             disabled={
-                              !!processingCompanyIds[c.id] || processingAllMissing || processingAllCompanies || !hasMissingAbout(c)
+                              !!processingCompanyIds[c.id] ||
+                              !!aiCompanyIds[c.id] ||
+                              processingAllMissing ||
+                              processingAllCompanies ||
+                              processingAllAiDisplay ||
+                              !hasMissingAbout(c)
                             }
                             title={hasMissingAbout(c) ? "Fill About using website/LinkedIn content" : "About already exists"}
                           >
                             {processingCompanyIds[c.id] ? "Filling..." : "Fill About"}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-sm secondary"
+                            onClick={() => void onAiDisplayForCompany(c)}
+                            disabled={
+                              !!aiCompanyIds[c.id] ||
+                              !!processingCompanyIds[c.id] ||
+                              processingAllMissing ||
+                              processingAllCompanies ||
+                              processingAllAiDisplay ||
+                              !hasAboutForAi(c) ||
+                              hasBothDisplayedFields(c)
+                            }
+                            title={
+                              !hasAboutForAi(c)
+                                ? "Add About text first (AI uses about_us)"
+                                : hasBothDisplayedFields(c)
+                                  ? "Displayed description and keywords are already set"
+                                  : "Generate displayed description & keywords from About (Gemini)"
+                            }
+                          >
+                            {aiCompanyIds[c.id] ? "AI…" : "AI"}
                           </button>
                         </div>
                       </td>

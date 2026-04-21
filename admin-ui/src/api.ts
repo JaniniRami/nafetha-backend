@@ -54,6 +54,37 @@ export type Company = {
   scraped_at: string;
 };
 
+/** Response from POST /api/admin/companies/{id}/ai-display */
+export type CompanyDisplayAIResponse = {
+  success: boolean;
+  description: string;
+  keywords: string[];
+  saved: boolean;
+  company: Company | null;
+};
+
+export type CompanyDisplayAIJobQueued = {
+  job_id: string;
+  status: string;
+};
+
+export type CompanyDisplayAIJobStatus = {
+  job_id: string;
+  status: string;
+  only_missing_display: boolean;
+  company_ids: string[];
+  limit: number | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  processed: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  declined: number;
+  error: string | null;
+};
+
 export type CompanyAboutBackfillRowResult = {
   company_id: string;
   company_name: string;
@@ -95,15 +126,48 @@ export type CompanyAboutBackfillJobStatus = {
 export type Job = {
   id: string;
   company_id: string | null;
+  company_name: string | null;
   job_id: string;
   job_title: string | null;
-  company_linkedin_url: string | null;
   posted_date: string | null;
   job_description: string | null;
-  linkedin_url: string;
-  seed_location: string | null;
+  extra_details: string | null;
+  job_url: string;
   keyword: string | null;
+  displayed_description: string | null;
+  displayed_keywords: string | null;
   scraped_at: string;
+};
+
+/** Response from POST /api/admin/jobs/{id}/ai-display */
+export type JobDisplayAIResponse = {
+  success: boolean;
+  description: string;
+  keywords: string[];
+  saved: boolean;
+  job: Job | null;
+};
+
+export type JobDisplayAIJobQueued = {
+  job_id: string;
+  status: string;
+};
+
+export type JobDisplayAIJobStatus = {
+  job_id: string;
+  status: string;
+  only_missing_display: boolean;
+  job_ids: string[];
+  limit: number | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  processed: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  declined: number;
+  error: string | null;
 };
 
 export type Community = {

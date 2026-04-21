@@ -43,6 +43,9 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
 # Playwright: true = headless (servers/CI); false/unset = visible browser (LinkedIn demos).
 HEADLESS_MODE = os.getenv("HEADLESS_MODE", "").lower() in ("1", "true", "yes")
 
+# Optional: admin AI display-field generation (local Ollama). Set OLLAMA_HOST if not default.
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b").strip()
+
 # LinkedIn login strategy when no valid session exists.
 # true  = wait for the user to log in manually in the browser window.
 # false = use LINKEDIN_EMAIL / LINKEDIN_PASSWORD from .env (programmatic).

@@ -1,8 +1,29 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+
+
+def normalize_displayed_keywords_input(v: object) -> object:
+    """Comma-separated keywords; spaces inside a token become hyphens (same rule as AI ``keywords_to_stored_string``)."""
+    if v is None:
+        return None
+    if not isinstance(v, str):
+        return v
+    s = v.strip()
+    if not s:
+        return None
+    parts: list[str] = []
+    for raw in s.split(","):
+        token = " ".join(raw.split())
+        if not token:
+            continue
+        token = token.replace(" ", "-")
+        if token and token not in parts:
+            parts.append(token)
+    return ",".join(parts) if parts else None
 
 
 class UserSetupStatus(BaseModel):
@@ -169,15 +190,44 @@ class ScrapedJobOut(BaseModel):
 
     id: UUID
     company_id: UUID | None
+    company_name: str | None = None
     job_id: str
     job_title: str | None
-    company_linkedin_url: str | None
     posted_date: str | None
     job_description: str | None
-    linkedin_url: str
-    seed_location: str | None
+    extra_details: str | None
+    job_url: str = Field(validation_alias=AliasChoices("job_url", "linkedin_url"))
     keyword: str | None
+    displayed_description: str | None
+    displayed_keywords: str | None
     scraped_at: datetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def attach_company_name(cls, data: Any) -> Any:
+        from app.models import ScrapedJob
+
+        if isinstance(data, ScrapedJob):
+            company_name = None
+            company = getattr(data, "company", None)
+            if company is not None:
+                company_name = company.company_name
+            return {
+                "id": data.id,
+                "company_id": data.company_id,
+                "company_name": company_name,
+                "job_id": data.job_id,
+                "job_title": data.job_title,
+                "posted_date": data.posted_date,
+                "job_description": data.job_description,
+                "extra_details": data.extra_details,
+                "job_url": data.linkedin_url,
+                "keyword": data.keyword,
+                "displayed_description": data.displayed_description,
+                "displayed_keywords": data.displayed_keywords,
+                "scraped_at": data.scraped_at,
+            }
+        return data
 
 
 class ScrapedCompanyOut(BaseModel):
@@ -232,22 +282,8 @@ class ScrapedCompanyCreate(BaseModel):
 
     @field_validator("displayed_keywords", mode="before")
     @classmethod
-    def displayed_keywords_strip_or_none(cls, v: object) -> object:
-        if v is None:
-            return None
-        if isinstance(v, str):
-            s = v.strip()
-            return s if s else None
-        return v
-
-    @field_validator("displayed_keywords")
-    @classmethod
-    def validate_displayed_keywords(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        if " " in v:
-            raise ValueError("displayed_keywords must be comma-separated with no spaces")
-        return v
+    def displayed_keywords_normalize(cls, v: object) -> object:
+        return normalize_displayed_keywords_input(v)
 
 
 class ScrapedCompanyUpdate(BaseModel):
@@ -287,22 +323,8 @@ class ScrapedCompanyUpdate(BaseModel):
 
     @field_validator("displayed_keywords", mode="before")
     @classmethod
-    def displayed_keywords_strip_or_none(cls, v: object) -> object:
-        if v is None:
-            return None
-        if isinstance(v, str):
-            s = v.strip()
-            return s if s else None
-        return v
-
-    @field_validator("displayed_keywords")
-    @classmethod
-    def validate_displayed_keywords(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        if " " in v:
-            raise ValueError("displayed_keywords must be comma-separated with no spaces")
-        return v
+    def displayed_keywords_normalize(cls, v: object) -> object:
+        return normalize_displayed_keywords_input(v)
 
 
 class CompanyAboutBackfillRequest(BaseModel):
@@ -365,20 +387,134 @@ class CompanyAboutBackfillJobStatus(BaseModel):
     error: str | None = None
 
 
+class CompanyDisplayAIResponse(BaseModel):
+    """Result of Gemini extraction from company about_us; DB updated only when extraction succeeds."""
+
+    success: bool
+    description: str = ""
+    keywords: list[str] = Field(default_factory=list)
+    saved: bool = False
+    company: ScrapedCompanyOut | None = None
+
+
+class CompanyDisplayAIJobRequest(BaseModel):
+    """Queue bulk AI display-field generation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    company_ids: list[UUID] = Field(
+        default_factory=list,
+        max_length=500,
+        description="Optional subset of companies; empty means all (subject to limit).",
+    )
+    only_missing_display: bool = Field(
+        default=True,
+        description="When true, only process rows where both displayed_description and displayed_keywords are empty; skip if either is already set.",
+    )
+    limit: int | None = Field(
+        default=None,
+        ge=1,
+        le=1000,
+        description="Max companies from the query when company_ids is empty.",
+    )
+
+
+class CompanyDisplayAIJobQueued(BaseModel):
+    job_id: str
+    status: str
+
+
+class CompanyDisplayAIJobStatus(BaseModel):
+    job_id: str
+    status: str
+    only_missing_display: bool
+    company_ids: list[UUID]
+    limit: int | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    processed: int = 0
+    updated: int = 0
+    skipped: int = 0
+    failed: int = 0
+    declined: int = 0
+    error: str | None = None
+
+
+class JobDisplayAIResponse(BaseModel):
+    """Result of Gemini extraction from job description; DB updated only when extraction succeeds."""
+
+    success: bool
+    description: str = ""
+    keywords: list[str] = Field(default_factory=list)
+    saved: bool = False
+    job: ScrapedJobOut | None = None
+
+
+class JobDisplayAIJobRequest(BaseModel):
+    """Queue bulk AI display-field generation for scraped job rows."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    job_ids: list[UUID] = Field(
+        default_factory=list,
+        max_length=500,
+        description="Optional subset of job row ids; empty means all (subject to limit).",
+    )
+    only_missing_display: bool = Field(
+        default=True,
+        description="When true, only process rows where both displayed_description and displayed_keywords are empty.",
+    )
+    limit: int | None = Field(
+        default=None,
+        ge=1,
+        le=1000,
+        description="Max jobs from the query when job_ids is empty.",
+    )
+
+
+class JobDisplayAIJobQueued(BaseModel):
+    job_id: str
+    status: str
+
+
+class JobDisplayAIJobStatus(BaseModel):
+    job_id: str
+    status: str
+    only_missing_display: bool
+    job_ids: list[UUID]
+    limit: int | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    processed: int = 0
+    updated: int = 0
+    skipped: int = 0
+    failed: int = 0
+    declined: int = 0
+    error: str | None = None
+
+
 class ScrapedJobUpdate(BaseModel):
     """Partial update for admin-managed scraped jobs."""
 
     model_config = ConfigDict(extra="forbid")
 
     job_id: str | None = Field(default=None, max_length=64)
-    linkedin_url: str | None = Field(default=None, min_length=1, max_length=1024)
+    job_url: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=1024,
+        validation_alias=AliasChoices("job_url", "linkedin_url"),
+    )
     company_id: UUID | None = None
     job_title: str | None = Field(default=None, max_length=512)
-    company_linkedin_url: str | None = Field(default=None, max_length=1024)
     posted_date: str | None = Field(default=None, max_length=255)
     job_description: str | None = None
-    seed_location: str | None = Field(default=None, max_length=255)
+    extra_details: str | None = None
     keyword: str | None = Field(default=None, max_length=255)
+    displayed_description: str | None = None
+    displayed_keywords: str | None = Field(default=None, max_length=1024)
 
     @field_validator("job_id", mode="before")
     @classmethod
@@ -390,14 +526,34 @@ class ScrapedJobUpdate(BaseModel):
             return s if s else None
         return v
 
-    @field_validator("linkedin_url", mode="before")
+    @field_validator("job_url", mode="before")
     @classmethod
-    def linkedin_url_strip(cls, v: object) -> object:
+    def job_url_strip(cls, v: object) -> object:
         if v is None:
             return None
         if isinstance(v, str):
             return v.strip()
         return v
+
+    @field_validator("keyword", mode="before")
+    @classmethod
+    def keyword_max_three_parts(cls, v: object) -> object:
+        if v is None or v == "":
+            return None
+        if not isinstance(v, str):
+            return v
+        s = v.strip()
+        if not s:
+            return None
+        parts = [p.strip() for p in s.split(",") if p.strip()]
+        if len(parts) > 3:
+            raise ValueError("At most 3 comma-separated keywords are allowed for jobs")
+        return ",".join(parts)
+
+    @field_validator("displayed_keywords", mode="before")
+    @classmethod
+    def job_displayed_keywords_normalize(cls, v: object) -> object:
+        return normalize_displayed_keywords_input(v)
 
 
 class ScrapedJobCreate(BaseModel):
@@ -406,14 +562,19 @@ class ScrapedJobCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     job_id: str | None = Field(default=None, max_length=64)
-    linkedin_url: str = Field(min_length=1, max_length=1024)
+    job_url: str = Field(
+        min_length=1,
+        max_length=1024,
+        validation_alias=AliasChoices("job_url", "linkedin_url"),
+    )
     company_id: UUID | None = None
     job_title: str | None = Field(default=None, max_length=512)
-    company_linkedin_url: str | None = Field(default=None, max_length=1024)
     posted_date: str | None = Field(default=None, max_length=255)
     job_description: str | None = None
-    seed_location: str | None = Field(default=None, max_length=255)
+    extra_details: str | None = None
     keyword: str | None = Field(default=None, max_length=255)
+    displayed_description: str | None = None
+    displayed_keywords: str | None = Field(default=None, max_length=1024)
 
     @field_validator("job_id", mode="before")
     @classmethod
@@ -424,6 +585,26 @@ class ScrapedJobCreate(BaseModel):
             s = v.strip()
             return s if s else None
         return v
+
+    @field_validator("keyword", mode="before")
+    @classmethod
+    def create_keyword_max_three_parts(cls, v: object) -> object:
+        if v is None or v == "":
+            return None
+        if not isinstance(v, str):
+            return v
+        s = v.strip()
+        if not s:
+            return None
+        parts = [p.strip() for p in s.split(",") if p.strip()]
+        if len(parts) > 3:
+            raise ValueError("At most 3 comma-separated keywords are allowed for jobs")
+        return ",".join(parts)
+
+    @field_validator("displayed_keywords", mode="before")
+    @classmethod
+    def create_displayed_keywords_normalize(cls, v: object) -> object:
+        return normalize_displayed_keywords_input(v)
 
 
 class CommunityOut(BaseModel):
@@ -569,4 +750,22 @@ class FavoriteStateOut(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     event_id: UUID
+    favorited: bool
+
+
+class CompanyFavoriteStateOut(BaseModel):
+    """Toggle or query favorite state for a catalog company (row id = ``companies.id``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: UUID
+    favorited: bool
+
+
+class JobFavoriteStateOut(BaseModel):
+    """Toggle or query favorite state for an internship / scraped job row (``jobs.id``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    job_row_id: UUID
     favorited: bool

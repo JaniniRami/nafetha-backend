@@ -44,6 +44,16 @@ class User(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    company_favorites: Mapped[list["UserCompanyFavorite"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    job_favorites: Mapped[list["UserJobFavorite"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class UserProfile(Base):
@@ -138,16 +148,24 @@ class ScrapedJob(Base):
     )
     job_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     job_title: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    company_linkedin_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     posted_date: Mapped[str | None] = mapped_column(String(255), nullable=True)
     job_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    extra_details: Mapped[str | None] = mapped_column(Text, nullable=True)
     linkedin_url: Mapped[str] = mapped_column(String(1024), unique=True, index=True, nullable=False)
-    seed_location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     keyword: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    displayed_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    displayed_keywords: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     scraped_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+    )
+
+    company: Mapped["ScrapedCompany | None"] = relationship("ScrapedCompany", back_populates="jobs")
+    user_favorites: Mapped[list["UserJobFavorite"]] = relationship(
+        back_populates="job",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
 
@@ -175,6 +193,69 @@ class ScrapedCompany(Base):
         server_default=func.now(),
         nullable=False,
     )
+
+    jobs: Mapped[list["ScrapedJob"]] = relationship("ScrapedJob", back_populates="company")
+    user_favorites: Mapped[list["UserCompanyFavorite"]] = relationship(
+        back_populates="company",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class UserCompanyFavorite(Base):
+    __tablename__ = "user_company_favorites"
+    __table_args__ = (UniqueConstraint("user_id", "company_id", name="uq_user_company_favorite"),)
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    company_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    user: Mapped["User"] = relationship(back_populates="company_favorites")
+    company: Mapped["ScrapedCompany"] = relationship(back_populates="user_favorites")
+
+
+class UserJobFavorite(Base):
+    """User bookmark of a scraped job row (``jobs.id``)."""
+
+    __tablename__ = "user_job_favorites"
+    __table_args__ = (UniqueConstraint("user_id", "job_id", name="uq_user_job_favorite"),)
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    job_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("jobs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    user: Mapped["User"] = relationship(back_populates="job_favorites")
+    job: Mapped["ScrapedJob"] = relationship(back_populates="user_favorites", foreign_keys=[job_id])
 
 
 class Community(Base):

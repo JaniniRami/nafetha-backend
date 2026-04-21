@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import Companies from "./pages/Companies";
 import Communities from "./pages/Communities";
 import LinkedInScraper from "./pages/LinkedInScraper";
+import TanqeebScraper from "./pages/TanqeebScraper";
 import Jobs from "./pages/Jobs";
 import { apiFetch, type MeResponse } from "./api";
 
@@ -46,6 +47,12 @@ function Layout({ children }: { children: React.ReactNode }) {
             className={({ isActive }) => `app-header__link${isActive ? " app-header__link--active" : ""}`}
           >
             LinkedIn scraper
+          </NavLink>
+          <NavLink
+            to="/tanqeeb-scraper"
+            className={({ isActive }) => `app-header__link${isActive ? " app-header__link--active" : ""}`}
+          >
+            Tanqeeb scraper
           </NavLink>
         </nav>
         <span className="spacer" />
@@ -147,6 +154,14 @@ export default function App() {
         element={
           <RequireAuth>
             <LinkedInScraper />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/tanqeeb-scraper"
+        element={
+          <RequireAuth>
+            <TanqeebScraper />
           </RequireAuth>
         }
       />

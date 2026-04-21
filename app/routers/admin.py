@@ -1,30 +1,43 @@
 """Superadmin JSON API for managing scraped companies and jobs."""
 
 import asyncio
+import json
+import time
 from datetime import datetime, timezone
-from pathlib import Path
 import re
-from urllib.parse import urlparse
+from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
-from app.config import HEADLESS_MODE
+from app.company_display_ai import (
+    generate_display_fields_from_about,
+    keywords_to_stored_string,
+)
+from app.job_display_ai import generate_display_fields_from_job_description
+from app.config import HEADLESS_MODE, OLLAMA_MODEL
 from app.database import get_db
 from app.database import SessionLocal
 from app.deps import require_superadmin
 from app.models import ScrapedCompany, ScrapedJob, User
-from app.scraper.config import DEFAULT_SESSION_PATH
-from app.scraper.services.auth import BrowserManager, ensure_authenticated_session
+from app.scraper.services.auth import BrowserManager
 from app.schemas import (
     CompanyAboutBackfillRequest,
     CompanyAboutBackfillResponse,
     CompanyAboutBackfillJobQueued,
     CompanyAboutBackfillJobStatus,
     CompanyAboutBackfillRowResult,
+    CompanyDisplayAIJobQueued,
+    CompanyDisplayAIJobRequest,
+    CompanyDisplayAIJobStatus,
+    CompanyDisplayAIResponse,
+    JobDisplayAIJobQueued,
+    JobDisplayAIJobRequest,
+    JobDisplayAIJobStatus,
+    JobDisplayAIResponse,
     ScrapedCompanyCreate,
     ScrapedCompanyOut,
     ScrapedCompanyUpdate,
@@ -36,16 +49,15 @@ from app.schemas import (
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 _about_backfill_jobs: dict[str, CompanyAboutBackfillJobStatus] = {}
+_display_ai_jobs: dict[str, CompanyDisplayAIJobStatus] = {}
+_job_display_ai_jobs: dict[str, JobDisplayAIJobStatus] = {}
 
+# Per-URL browser cap; slow/hung LinkedIn loads fall through to website when one exists.
+_BROWSER_FETCH_TIMEOUT_SEC = 75.0
 
-def _is_linkedin_url(value: str | None) -> bool:
-    if not value:
-        return False
-    try:
-        host = (urlparse(value).hostname or "").lower()
-    except Exception:
-        return False
-    return host == "linkedin.com" or host.endswith(".linkedin.com")
+# Long-poll window for GET .../jobs/{id}?wait=1 (reduces client poll spam).
+_JOB_STATUS_WAIT_MAX_SEC = 55.0
+_JOB_STATUS_WAIT_INTERVAL_SEC = 1.5
 
 
 def _normalize_text(text: str, *, max_chars: int = 2000) -> str:
@@ -55,11 +67,9 @@ def _normalize_text(text: str, *, max_chars: int = 2000) -> str:
     return compact[:max_chars]
 
 
-async def _fetch_with_browser(url: str, *, require_linkedin_auth: bool) -> tuple[str | None, str | None]:
+async def _fetch_with_browser(url: str) -> tuple[str | None, str | None]:
     try:
         async with BrowserManager(headless=HEADLESS_MODE) as browser:
-            if require_linkedin_auth:
-                await ensure_authenticated_session(browser, Path(DEFAULT_SESSION_PATH).resolve())
             await browser.page.goto(url, wait_until="domcontentloaded")
             await browser.page.wait_for_timeout(1500)
             page_text = await browser.page.evaluate(
@@ -88,6 +98,17 @@ async def _fetch_with_browser(url: str, *, require_linkedin_auth: bool) -> tuple
     if not text:
         return None, "empty_content_after_cleanup"
     return text, None
+
+
+async def _fetch_about_with_timeout(url: str) -> tuple[str | None, str | None]:
+    """Run ``_fetch_with_browser`` with a wall-clock cap so callers can try another URL (e.g. website after LinkedIn)."""
+    try:
+        return await asyncio.wait_for(
+            _fetch_with_browser(url),
+            timeout=_BROWSER_FETCH_TIMEOUT_SEC,
+        )
+    except asyncio.TimeoutError:
+        return None, "fetch_timeout"
 
 
 def _generate_job_external_id() -> str:
@@ -191,6 +212,18 @@ def admin_list_companies(
 ) -> list[ScrapedCompany]:
     stmt = select(ScrapedCompany).order_by(ScrapedCompany.scraped_at.desc())
     return list(db.scalars(stmt).all())
+
+
+@router.get("/companies/{company_id}", response_model=ScrapedCompanyOut)
+def admin_get_company(
+    company_id: UUID,
+    _: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> ScrapedCompany:
+    row = db.get(ScrapedCompany, company_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+    return row
 
 
 @router.post("/companies", response_model=ScrapedCompanyOut, status_code=status.HTTP_201_CREATED)
@@ -321,6 +354,247 @@ def admin_update_company(
     return row
 
 
+def _has_any_display_field(row: ScrapedCompany) -> bool:
+    """True if displayed description or keywords already has content."""
+    d = (row.displayed_description or "").strip()
+    k = (row.displayed_keywords or "").strip()
+    return bool(d or k)
+
+
+def _rows_for_display_ai_job(db: Session, payload: CompanyDisplayAIJobRequest) -> list[ScrapedCompany]:
+    stmt = select(ScrapedCompany).order_by(ScrapedCompany.scraped_at.desc())
+    if payload.company_ids:
+        stmt = stmt.where(ScrapedCompany.id.in_(payload.company_ids))
+    if not payload.company_ids and payload.limit is not None:
+        stmt = stmt.limit(payload.limit)
+    return list(db.scalars(stmt).all())
+
+
+def _assign_display_fields_from_ai_parse(row: ScrapedCompany, parsed: dict[str, Any]) -> None:
+    keywords_str = keywords_to_stored_string(parsed.get("keywords", []))
+    row.displayed_description = (parsed.get("description") or "").strip() or None
+    row.displayed_keywords = keywords_str or None
+
+
+@router.post("/companies/{company_id}/ai-display", response_model=CompanyDisplayAIResponse)
+def admin_company_generate_ai_display_fields(
+    company_id: UUID,
+    _: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> CompanyDisplayAIResponse:
+    """Use local Ollama on ``about_us`` to fill ``displayed_description`` and ``displayed_keywords`` when extraction succeeds."""
+    if not OLLAMA_MODEL:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="OLLAMA_MODEL is not configured.",
+        )
+
+    row = db.get(ScrapedCompany, company_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+
+    about = (row.about_us or "").strip()
+    if not about:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Company has no about_us text to analyze.",
+        )
+
+    try:
+        parsed = generate_display_fields_from_about(about)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Model response could not be parsed: {exc}",
+        ) from exc
+
+    if not parsed["success"]:
+        return CompanyDisplayAIResponse(
+            success=False,
+            description="",
+            keywords=[],
+            saved=False,
+            company=None,
+        )
+
+    _assign_display_fields_from_ai_parse(row, parsed)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Could not save display fields: {exc}",
+        ) from exc
+    db.refresh(row)
+
+    return CompanyDisplayAIResponse(
+        success=True,
+        description=parsed["description"],
+        keywords=parsed["keywords"],
+        saved=True,
+        company=ScrapedCompanyOut.model_validate(row),
+    )
+
+
+async def _enqueue_about_backfill_job(payload: CompanyAboutBackfillRequest) -> CompanyAboutBackfillJobQueued:
+    """Must be called from an ``async`` route so ``asyncio.create_task`` has a running event loop."""
+    print(
+        "[about-backfill] enqueue job "
+        f"n_company_ids={len(payload.company_ids)} only_missing={payload.only_missing} limit={payload.limit}",
+        flush=True,
+    )
+    job_id = str(uuid4())
+    _about_backfill_jobs[job_id] = CompanyAboutBackfillJobStatus(
+        job_id=job_id,
+        status="queued",
+        only_missing=payload.only_missing,
+        company_ids=list(payload.company_ids),
+        limit=payload.limit,
+        created_at=datetime.now(timezone.utc),
+    )
+    asyncio.create_task(_run_company_about_backfill_job(job_id))
+    return CompanyAboutBackfillJobQueued(job_id=job_id, status="queued")
+
+
+@router.post("/companies/{company_id}/backfill-about", response_model=CompanyAboutBackfillResponse)
+async def admin_backfill_one_company_about(
+    company_id: UUID,
+    _: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> CompanyAboutBackfillResponse:
+    """Fetch and save ``about_us`` for this company only (synchronous; no job queue)."""
+    print(f"[about-backfill] single POST /companies/{{id}}/backfill-about company_id={company_id}", flush=True)
+    if db.get(ScrapedCompany, company_id) is None:
+        print(f"[about-backfill] single company not found: {company_id}", flush=True)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+    payload = CompanyAboutBackfillRequest(company_ids=[company_id], only_missing=True)
+    result = await _run_company_about_backfill(db, payload)
+    print(
+        "[about-backfill] single company finished "
+        f"id={company_id} processed={result.processed} updated={result.updated} "
+        f"skipped={result.skipped} failed={result.failed}",
+        flush=True,
+    )
+    return result
+
+
+async def _run_company_display_ai_job(job_id: str) -> None:
+    job = _display_ai_jobs.get(job_id)
+    if job is None:
+        return
+
+    if not OLLAMA_MODEL:
+        job.status = "failed"
+        job.error = "OLLAMA_MODEL is not configured."
+        job.completed_at = datetime.now(timezone.utc)
+        return
+
+    job.status = "running"
+    job.started_at = datetime.now(timezone.utc)
+
+    payload = CompanyDisplayAIJobRequest(
+        company_ids=list(job.company_ids),
+        only_missing_display=job.only_missing_display,
+        limit=job.limit,
+    )
+    db = SessionLocal()
+    updated = 0
+    skipped = 0
+    failed = 0
+    declined = 0
+    try:
+        rows = _rows_for_display_ai_job(db, payload)
+        job.processed = len(rows)
+        for row in rows:
+            about = (row.about_us or "").strip()
+            if not about:
+                skipped += 1
+                continue
+            if job.only_missing_display and _has_any_display_field(row):
+                skipped += 1
+                continue
+            try:
+                parsed = await asyncio.to_thread(generate_display_fields_from_about, about)
+            except RuntimeError as exc:
+                db.rollback()
+                job.updated = updated
+                job.skipped = skipped
+                job.failed = failed
+                job.declined = declined
+                job.status = "failed"
+                job.error = str(exc)
+                job.completed_at = datetime.now(timezone.utc)
+                return
+            except Exception:
+                db.rollback()
+                failed += 1
+                continue
+            if not parsed.get("success"):
+                declined += 1
+                continue
+            try:
+                _assign_display_fields_from_ai_parse(row, parsed)
+                db.commit()
+                updated += 1
+            except IntegrityError:
+                db.rollback()
+                failed += 1
+        job.updated = updated
+        job.skipped = skipped
+        job.failed = failed
+        job.declined = declined
+        job.status = "completed"
+        job.completed_at = datetime.now(timezone.utc)
+    except Exception as exc:
+        db.rollback()
+        job.status = "failed"
+        job.error = str(exc)
+        job.completed_at = datetime.now(timezone.utc)
+    finally:
+        db.close()
+
+
+@router.post("/companies/ai-display/jobs", response_model=CompanyDisplayAIJobQueued)
+async def admin_enqueue_company_display_ai(
+    payload: CompanyDisplayAIJobRequest,
+    _: User = Depends(require_superadmin),
+) -> CompanyDisplayAIJobQueued:
+    """Background job: fill displayed fields from about_us. With default ``only_missing_display``, only rows with both fields empty are processed."""
+    job_id = str(uuid4())
+    _display_ai_jobs[job_id] = CompanyDisplayAIJobStatus(
+        job_id=job_id,
+        status="queued",
+        only_missing_display=payload.only_missing_display,
+        company_ids=list(payload.company_ids),
+        limit=payload.limit,
+        created_at=datetime.now(timezone.utc),
+    )
+    asyncio.create_task(_run_company_display_ai_job(job_id))
+    return CompanyDisplayAIJobQueued(job_id=job_id, status="queued")
+
+
+@router.get("/companies/ai-display/jobs/{job_id}", response_model=CompanyDisplayAIJobStatus)
+async def admin_get_company_display_ai_job(
+    job_id: str,
+    wait: bool = False,
+    _: User = Depends(require_superadmin),
+) -> CompanyDisplayAIJobStatus:
+    job = _display_ai_jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AI display job not found")
+    if not wait:
+        return job
+    deadline = time.monotonic() + _JOB_STATUS_WAIT_MAX_SEC
+    while job.status not in ("completed", "failed"):
+        if time.monotonic() >= deadline:
+            return job
+        await asyncio.sleep(_JOB_STATUS_WAIT_INTERVAL_SEC)
+    return job
+
+
 @router.delete("/companies/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
 def admin_delete_company(
     company_id: UUID,
@@ -336,7 +610,7 @@ def admin_delete_company(
 
 def _build_company_backfill_query(payload: CompanyAboutBackfillRequest):
     stmt = select(ScrapedCompany).order_by(ScrapedCompany.scraped_at.desc())
-    if payload.company_ids:
+    if len(payload.company_ids) > 0:
         stmt = stmt.where(ScrapedCompany.id.in_(payload.company_ids))
     elif payload.only_missing:
         stmt = stmt.where(
@@ -345,7 +619,7 @@ def _build_company_backfill_query(payload: CompanyAboutBackfillRequest):
                 func.length(func.trim(ScrapedCompany.about_us)) == 0,
             )
         )
-    if not payload.company_ids and payload.limit is not None:
+    if len(payload.company_ids) == 0 and payload.limit is not None:
         stmt = stmt.limit(payload.limit)
     return stmt
 
@@ -354,8 +628,14 @@ async def _run_company_about_backfill(
     db: Session,
     payload: CompanyAboutBackfillRequest,
 ) -> CompanyAboutBackfillResponse:
+    print(
+        "[about-backfill] run start "
+        f"n_company_ids={len(payload.company_ids)} only_missing={payload.only_missing} limit={payload.limit}",
+        flush=True,
+    )
     stmt = _build_company_backfill_query(payload)
     rows = list(db.scalars(stmt).all())
+    print(f"[about-backfill] query matched {len(rows)} company row(s)", flush=True)
     results: list[CompanyAboutBackfillRowResult] = []
     updated = 0
     skipped = 0
@@ -396,9 +676,8 @@ async def _run_company_about_backfill(
         errors: list[str] = []
 
         if linkedin_url:
-            text, err = await _fetch_with_browser(
+            text, err = await _fetch_about_with_timeout(
                 linkedin_url,
-                require_linkedin_auth=_is_linkedin_url(linkedin_url),
             )
             if text:
                 source_url = linkedin_url
@@ -406,9 +685,8 @@ async def _run_company_about_backfill(
                 errors.append(f"linkedin_url:{err}")
 
         if text is None and website_url:
-            text, err = await _fetch_with_browser(
+            text, err = await _fetch_about_with_timeout(
                 website_url,
-                require_linkedin_auth=_is_linkedin_url(website_url),
             )
             if text:
                 source_url = website_url
@@ -443,6 +721,11 @@ async def _run_company_about_backfill(
     if updated:
         db.commit()
 
+    print(
+        "[about-backfill] run end "
+        f"processed={len(rows)} updated={updated} skipped={skipped} failed={failed}",
+        flush=True,
+    )
     return CompanyAboutBackfillResponse(
         processed=len(rows),
         updated=updated,
@@ -463,6 +746,11 @@ async def _run_company_about_backfill_job(job_id: str) -> None:
         company_ids=job.company_ids,
         only_missing=job.only_missing,
         limit=job.limit,
+    )
+    print(
+        "[about-backfill] queued job running "
+        f"job_id={job_id} n_company_ids={len(payload.company_ids)} only_missing={payload.only_missing} limit={payload.limit}",
+        flush=True,
     )
     db = SessionLocal()
     try:
@@ -496,27 +784,223 @@ async def admin_enqueue_company_about_backfill(
     payload: CompanyAboutBackfillRequest,
     _: User = Depends(require_superadmin),
 ) -> CompanyAboutBackfillJobQueued:
-    job_id = str(uuid4())
-    _about_backfill_jobs[job_id] = CompanyAboutBackfillJobStatus(
-        job_id=job_id,
-        status="queued",
-        only_missing=payload.only_missing,
-        company_ids=list(payload.company_ids),
-        limit=payload.limit,
-        created_at=datetime.now(timezone.utc),
-    )
-    asyncio.create_task(_run_company_about_backfill_job(job_id))
-    return CompanyAboutBackfillJobQueued(job_id=job_id, status="queued")
+    return await _enqueue_about_backfill_job(payload)
 
 
 @router.get("/companies/backfill-about/jobs/{job_id}", response_model=CompanyAboutBackfillJobStatus)
-def admin_get_company_about_backfill_job(
+async def admin_get_company_about_backfill_job(
     job_id: str,
+    wait: bool = False,
     _: User = Depends(require_superadmin),
 ) -> CompanyAboutBackfillJobStatus:
     job = _about_backfill_jobs.get(job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backfill job not found")
+    if not wait:
+        return job
+    deadline = time.monotonic() + _JOB_STATUS_WAIT_MAX_SEC
+    while job.status not in ("completed", "failed"):
+        if time.monotonic() >= deadline:
+            return job
+        await asyncio.sleep(_JOB_STATUS_WAIT_INTERVAL_SEC)
+    return job
+
+
+def _has_any_job_display_field(row: ScrapedJob) -> bool:
+    d = (row.displayed_description or "").strip()
+    k = (row.displayed_keywords or "").strip()
+    return bool(d or k)
+
+
+def _rows_for_job_display_ai_job(db: Session, payload: JobDisplayAIJobRequest) -> list[ScrapedJob]:
+    stmt = select(ScrapedJob).order_by(ScrapedJob.scraped_at.desc())
+    if payload.job_ids:
+        stmt = stmt.where(ScrapedJob.id.in_(payload.job_ids))
+    if not payload.job_ids and payload.limit is not None:
+        stmt = stmt.limit(payload.limit)
+    return list(db.scalars(stmt).all())
+
+
+def _assign_job_display_fields_from_ai_parse(row: ScrapedJob, parsed: dict[str, Any]) -> None:
+    keywords_str = keywords_to_stored_string(parsed.get("keywords", []))
+    row.displayed_description = (parsed.get("description") or "").strip() or None
+    row.displayed_keywords = keywords_str or None
+
+
+@router.post("/jobs/{job_row_id}/ai-display", response_model=JobDisplayAIResponse)
+def admin_job_generate_ai_display_fields(
+    job_row_id: UUID,
+    _: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> JobDisplayAIResponse:
+    """Use local Ollama on ``job_description`` to fill ``displayed_description`` and ``displayed_keywords`` when extraction succeeds."""
+    if not OLLAMA_MODEL:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="OLLAMA_MODEL is not configured.",
+        )
+
+    row = db.get(ScrapedJob, job_row_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    desc = (row.job_description or "").strip()
+    if not desc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Job has no description text to analyze.",
+        )
+
+    try:
+        parsed = generate_display_fields_from_job_description(desc)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Model response could not be parsed: {exc}",
+        ) from exc
+
+    if not parsed["success"]:
+        return JobDisplayAIResponse(
+            success=False,
+            description="",
+            keywords=[],
+            saved=False,
+            job=None,
+        )
+
+    _assign_job_display_fields_from_ai_parse(row, parsed)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Could not save display fields: {exc}",
+        ) from None
+    db.refresh(row)
+
+    return JobDisplayAIResponse(
+        success=True,
+        description=parsed["description"],
+        keywords=parsed["keywords"],
+        saved=True,
+        job=ScrapedJobOut.model_validate(row),
+    )
+
+
+async def _run_job_display_ai_job(batch_job_id: str) -> None:
+    job = _job_display_ai_jobs.get(batch_job_id)
+    if job is None:
+        return
+
+    if not OLLAMA_MODEL:
+        job.status = "failed"
+        job.error = "OLLAMA_MODEL is not configured."
+        job.completed_at = datetime.now(timezone.utc)
+        return
+
+    job.status = "running"
+    job.started_at = datetime.now(timezone.utc)
+
+    payload = JobDisplayAIJobRequest(
+        job_ids=list(job.job_ids),
+        only_missing_display=job.only_missing_display,
+        limit=job.limit,
+    )
+    db = SessionLocal()
+    updated = 0
+    skipped = 0
+    failed = 0
+    declined = 0
+    try:
+        rows = _rows_for_job_display_ai_job(db, payload)
+        job.processed = len(rows)
+        for row in rows:
+            text = (row.job_description or "").strip()
+            if not text:
+                skipped += 1
+                continue
+            if job.only_missing_display and _has_any_job_display_field(row):
+                skipped += 1
+                continue
+            try:
+                parsed = await asyncio.to_thread(generate_display_fields_from_job_description, text)
+            except RuntimeError as exc:
+                db.rollback()
+                job.updated = updated
+                job.skipped = skipped
+                job.failed = failed
+                job.declined = declined
+                job.status = "failed"
+                job.error = str(exc)
+                job.completed_at = datetime.now(timezone.utc)
+                return
+            except Exception:
+                db.rollback()
+                failed += 1
+                continue
+            if not parsed.get("success"):
+                declined += 1
+                continue
+            try:
+                _assign_job_display_fields_from_ai_parse(row, parsed)
+                db.commit()
+                updated += 1
+            except IntegrityError:
+                db.rollback()
+                failed += 1
+        job.updated = updated
+        job.skipped = skipped
+        job.failed = failed
+        job.declined = declined
+        job.status = "completed"
+        job.completed_at = datetime.now(timezone.utc)
+    except Exception as exc:
+        db.rollback()
+        job.status = "failed"
+        job.error = str(exc)
+        job.completed_at = datetime.now(timezone.utc)
+    finally:
+        db.close()
+
+
+@router.post("/jobs/ai-display/jobs", response_model=JobDisplayAIJobQueued)
+async def admin_enqueue_job_display_ai(
+    payload: JobDisplayAIJobRequest,
+    _: User = Depends(require_superadmin),
+) -> JobDisplayAIJobQueued:
+    """Background job: fill displayed fields from job_description."""
+    batch_job_id = str(uuid4())
+    _job_display_ai_jobs[batch_job_id] = JobDisplayAIJobStatus(
+        job_id=batch_job_id,
+        status="queued",
+        only_missing_display=payload.only_missing_display,
+        job_ids=list(payload.job_ids),
+        limit=payload.limit,
+        created_at=datetime.now(timezone.utc),
+    )
+    asyncio.create_task(_run_job_display_ai_job(batch_job_id))
+    return JobDisplayAIJobQueued(job_id=batch_job_id, status="queued")
+
+
+@router.get("/jobs/ai-display/jobs/{job_id}", response_model=JobDisplayAIJobStatus)
+async def admin_get_job_display_ai_job(
+    job_id: str,
+    wait: bool = False,
+    _: User = Depends(require_superadmin),
+) -> JobDisplayAIJobStatus:
+    job = _job_display_ai_jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AI display job not found")
+    if not wait:
+        return job
+    deadline = time.monotonic() + _JOB_STATUS_WAIT_MAX_SEC
+    while job.status not in ("completed", "failed"):
+        if time.monotonic() >= deadline:
+            return job
+        await asyncio.sleep(_JOB_STATUS_WAIT_INTERVAL_SEC)
     return job
 
 
@@ -525,7 +1009,11 @@ def admin_list_jobs(
     _: User = Depends(require_superadmin),
     db: Session = Depends(get_db),
 ) -> list[ScrapedJob]:
-    stmt = select(ScrapedJob).order_by(ScrapedJob.scraped_at.desc())
+    stmt = (
+        select(ScrapedJob)
+        .options(selectinload(ScrapedJob.company))
+        .order_by(ScrapedJob.scraped_at.desc())
+    )
     return list(db.scalars(stmt).all())
 
 
@@ -546,12 +1034,13 @@ def admin_create_job(
         company_id=payload.company_id,
         job_id=external_job_id,
         job_title=payload.job_title,
-        company_linkedin_url=payload.company_linkedin_url,
         posted_date=payload.posted_date,
         job_description=payload.job_description,
-        linkedin_url=payload.linkedin_url.strip(),
-        seed_location=payload.seed_location,
+        extra_details=payload.extra_details,
+        linkedin_url=payload.job_url.strip(),
         keyword=payload.keyword,
+        displayed_description=payload.displayed_description,
+        displayed_keywords=payload.displayed_keywords,
     )
     db.add(row)
     try:
@@ -600,10 +1089,10 @@ def admin_update_job(
             )
         row.job_id = jid
 
-    if "linkedin_url" in data:
-        url = (data["linkedin_url"] or "").strip()
+    if "job_url" in data:
+        url = (data["job_url"] or "").strip()
         if not url:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="linkedin_url cannot be empty")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="job_url cannot be empty")
         if db.scalar(
             select(ScrapedJob.id).where(ScrapedJob.linkedin_url == url, ScrapedJob.id != job_row_id).limit(1)
         ):
@@ -615,16 +1104,18 @@ def admin_update_job(
 
     if "job_title" in data:
         row.job_title = data["job_title"]
-    if "company_linkedin_url" in data:
-        row.company_linkedin_url = data["company_linkedin_url"]
     if "posted_date" in data:
         row.posted_date = data["posted_date"]
     if "job_description" in data:
         row.job_description = data["job_description"]
-    if "seed_location" in data:
-        row.seed_location = data["seed_location"]
+    if "extra_details" in data:
+        row.extra_details = data["extra_details"]
     if "keyword" in data:
         row.keyword = data["keyword"]
+    if "displayed_description" in data:
+        row.displayed_description = data["displayed_description"]
+    if "displayed_keywords" in data:
+        row.displayed_keywords = data["displayed_keywords"]
 
     try:
         db.commit()
