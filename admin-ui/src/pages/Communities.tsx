@@ -5,6 +5,7 @@ const emptyCommunityForm = {
   name: "",
   description: "",
   website: "",
+  keywords: "",
 };
 
 const emptyEventForm = {
@@ -39,6 +40,7 @@ export default function Communities() {
 
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
   const [editCommunityForm, setEditCommunityForm] = useState(emptyCommunityForm);
+  const [aiCommunityIds, setAiCommunityIds] = useState<Record<string, boolean>>({});
 
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
   const [editEventForm, setEditEventForm] = useState(emptyEventForm);
@@ -96,12 +98,14 @@ export default function Communities() {
     setError(null);
     setSuccess(null);
     try {
+      const kw = communityForm.keywords.trim();
       const created = await apiFetch<Community>("/api/communities", {
         method: "POST",
         body: JSON.stringify({
           name: communityForm.name.trim(),
           description: communityForm.description,
           website: optionalWebsite(communityForm.website),
+          keywords: kw ? kw : null,
         }),
       });
       setSuccess("Community created.");
@@ -121,6 +125,7 @@ export default function Communities() {
       name: c.name,
       description: c.description,
       website: c.website ?? "",
+      keywords: c.keywords ?? "",
     });
   }
 
@@ -129,18 +134,58 @@ export default function Communities() {
     setEditCommunityForm(emptyCommunityForm);
   }
 
+  function hasCommunityContentForAi(c: Community): boolean {
+    return !!(c.name ?? "").trim() || !!(c.description ?? "").trim();
+  }
+
+  function hasBothCommunityAiFields(c: Community): boolean {
+    const d = (c.description ?? "").trim();
+    const k = (c.keywords ?? "").trim();
+    return !!(d && k);
+  }
+
+  async function onAiDisplayForCommunity(c: Community) {
+    setError(null);
+    setSuccess(null);
+    setAiCommunityIds((prev) => ({ ...prev, [c.id]: true }));
+    try {
+      const updated = await apiFetch<Community>(`/api/communities/${encodeURIComponent(c.id)}/display-ai`, {
+        method: "POST",
+      });
+      setSuccess("Description and keywords updated from name and description (AI).");
+      setCommunities((prev) => prev.map((row) => (row.id === updated.id ? updated : row)));
+      if (editingCommunity?.id === c.id) {
+        setEditCommunityForm({
+          name: updated.name,
+          description: updated.description,
+          website: updated.website ?? "",
+          keywords: updated.keywords ?? "",
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI display generation failed");
+    } finally {
+      setAiCommunityIds((prev) => {
+        const { [c.id]: _removed, ...rest } = prev;
+        return rest;
+      });
+    }
+  }
+
   async function onSaveCommunity(e: React.FormEvent) {
     e.preventDefault();
     if (!editingCommunity) return;
     setError(null);
     setSuccess(null);
     try {
+      const kw = editCommunityForm.keywords.trim();
       await apiFetch<Community>(`/api/communities/${encodeURIComponent(editingCommunity.id)}`, {
         method: "PATCH",
         body: JSON.stringify({
           name: editCommunityForm.name.trim(),
           description: editCommunityForm.description,
           website: optionalWebsite(editCommunityForm.website),
+          keywords: kw ? kw : null,
         }),
       });
       setSuccess("Community updated.");
@@ -309,6 +354,13 @@ export default function Communities() {
             onChange={(e) => setCommunityForm((f) => ({ ...f, description: e.target.value }))}
             rows={3}
           />
+          <label htmlFor="c_keywords">Keywords (optional, comma-separated)</label>
+          <input
+            id="c_keywords"
+            value={communityForm.keywords}
+            onChange={(e) => setCommunityForm((f) => ({ ...f, keywords: e.target.value }))}
+            placeholder="topic-one,topic-two"
+          />
           <button type="submit">Create community</button>
         </form>
       </div>
@@ -346,6 +398,12 @@ export default function Communities() {
               onChange={(e) => setEditCommunityForm((f) => ({ ...f, description: e.target.value }))}
               rows={3}
             />
+            <label htmlFor="ec_keywords">Keywords (optional, comma-separated)</label>
+            <input
+              id="ec_keywords"
+              value={editCommunityForm.keywords}
+              onChange={(e) => setEditCommunityForm((f) => ({ ...f, keywords: e.target.value }))}
+            />
             <div className="table-actions">
               <button type="submit">Save changes</button>
               <button type="button" className="secondary" onClick={cancelEditCommunity}>
@@ -372,6 +430,7 @@ export default function Communities() {
                 <tr>
                   <th>Name</th>
                   <th>Website</th>
+                  <th>Keywords</th>
                   <th>Created</th>
                   <th>Actions</th>
                 </tr>
@@ -389,6 +448,9 @@ export default function Communities() {
                         <span className="muted">—</span>
                       )}
                     </td>
+                    <td className="muted" style={{ maxWidth: "12rem", overflow: "hidden", textOverflow: "ellipsis" }} title={c.keywords ?? undefined}>
+                      {c.keywords?.trim() ? c.keywords : "—"}
+                    </td>
                     <td className="muted">{new Date(c.created_at).toLocaleString()}</td>
                     <td>
                       <div className="table-actions">
@@ -397,6 +459,21 @@ export default function Communities() {
                         </button>
                         <button type="button" className="btn-sm secondary" onClick={() => void onDeleteCommunity(c)}>
                           Delete
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-sm secondary"
+                          onClick={() => void onAiDisplayForCommunity(c)}
+                          disabled={!!aiCommunityIds[c.id] || !hasCommunityContentForAi(c) || hasBothCommunityAiFields(c)}
+                          title={
+                            !hasCommunityContentForAi(c)
+                              ? "Add a name or description first (AI uses both)"
+                              : hasBothCommunityAiFields(c)
+                                ? "Description and keywords are already set — clear one to run AI again"
+                                : "Generate one-line description and three keywords (Ollama)"
+                          }
+                        >
+                          {aiCommunityIds[c.id] ? "AI…" : "AI"}
                         </button>
                       </div>
                     </td>

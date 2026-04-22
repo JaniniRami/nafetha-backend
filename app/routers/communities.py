@@ -1,12 +1,15 @@
 """Communities, community events, subscriptions, and event favorites (authenticated)."""
 
+import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
+from app.company_display_ai import keywords_to_stored_string
+from app.community_display_ai import generate_display_fields_from_community
 from app.database import get_db
 from app.deps import get_current_user
 from app.models import (
@@ -23,6 +26,7 @@ from app.schemas import (
     CommunityEventUpdate,
     CommunityOut,
     CommunityUpdate,
+    CommunityWithEventsOut,
     FavoriteStateOut,
     SubscriptionStateOut,
 )
@@ -61,6 +65,20 @@ def list_communities(
     return list(db.scalars(stmt).all())
 
 
+@router.get("/full", response_model=list[CommunityWithEventsOut])
+def list_communities_with_events(
+    _: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[Community]:
+    """All communities, each with its events (same auth as ``GET /communities``)."""
+    stmt = (
+        select(Community)
+        .options(selectinload(Community.events))
+        .order_by(Community.created_at.desc())
+    )
+    return list(db.scalars(stmt).all())
+
+
 @router.post("", response_model=CommunityOut, status_code=status.HTTP_201_CREATED)
 def create_community(
     payload: CommunityCreate,
@@ -71,6 +89,7 @@ def create_community(
         name=payload.name,
         description=payload.description,
         website=payload.website,
+        keywords=payload.keywords,
         created_by_user_id=current_user.id,
     )
     db.add(row)
@@ -116,6 +135,55 @@ def get_community(
     return _get_community_or_404(db, community_id)
 
 
+@router.post("/{community_id}/display-ai", response_model=CommunityOut)
+async def refresh_community_display_ai(
+    community_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Community:
+    """Rewrite description to one sentence and set three keywords (Ollama ``OLLAMA_MODEL``)."""
+    community = _get_community_or_404(db, community_id)
+    if not _can_manage_community(current_user, community):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to edit this community")
+
+    try:
+        parsed = await asyncio.to_thread(
+            generate_display_fields_from_community,
+            community.name,
+            community.description,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+
+    if not parsed.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="AI could not summarize this community from the current name and description",
+        )
+    desc = (parsed.get("description") or "").strip()
+    kws = list(parsed.get("keywords") or [])[:3]
+    if not desc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="AI returned an empty description",
+        )
+    if len(kws) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="AI must return exactly three keywords; try again or edit manually",
+        )
+
+    community.description = desc
+    stored_kw = keywords_to_stored_string(kws)
+    community.keywords = stored_kw if stored_kw else None
+
+    db.commit()
+    db.refresh(community)
+    return community
+
+
 @router.patch("/{community_id}", response_model=CommunityOut)
 def update_community(
     community_id: UUID,
@@ -137,6 +205,8 @@ def update_community(
         community.description = data["description"]
     if "website" in data:
         community.website = data["website"]
+    if "keywords" in data:
+        community.keywords = data["keywords"]
 
     db.commit()
     db.refresh(community)

@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Self
 from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
@@ -614,6 +614,7 @@ class CommunityOut(BaseModel):
     name: str
     description: str
     website: str | None
+    keywords: str | None
     created_by_user_id: UUID | None
     created_at: datetime
 
@@ -624,6 +625,7 @@ class CommunityCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str = Field(default="", max_length=50_000)
     website: str | None = Field(default=None, max_length=1024)
+    keywords: str | None = Field(default=None, max_length=1024)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -641,6 +643,11 @@ class CommunityCreate(BaseModel):
             s = v.strip()
             return s if s else None
         return v
+
+    @field_validator("keywords", mode="before")
+    @classmethod
+    def create_keywords_normalize(cls, v: object) -> object:
+        return normalize_displayed_keywords_input(v)
 
 
 class CommunityUpdate(BaseModel):
@@ -649,6 +656,7 @@ class CommunityUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=50_000)
     website: str | None = Field(default=None, max_length=1024)
+    keywords: str | None = Field(default=None, max_length=1024)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -668,6 +676,11 @@ class CommunityUpdate(BaseModel):
             s = v.strip()
             return s if s else None
         return v
+
+    @field_validator("keywords", mode="before")
+    @classmethod
+    def update_keywords_normalize(cls, v: object) -> object:
+        return normalize_displayed_keywords_input(v)
 
 
 class CommunityEventOut(BaseModel):
@@ -681,6 +694,17 @@ class CommunityEventOut(BaseModel):
     description: str
     website: str | None
     created_at: datetime
+
+
+class CommunityWithEventsOut(CommunityOut):
+    """Community row including all events (sorted by ``event_at`` ascending)."""
+
+    events: list[CommunityEventOut] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def sort_events_by_time(self) -> Self:
+        self.events = sorted(self.events, key=lambda e: e.event_at)
+        return self
 
 
 class CommunityEventCreate(BaseModel):

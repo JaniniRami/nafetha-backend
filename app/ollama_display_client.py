@@ -1,4 +1,4 @@
-"""Call local Ollama for structured display-field JSON (companies + jobs)."""
+"""Call local Ollama for structured display-field JSON (companies, jobs, communities)."""
 
 from __future__ import annotations
 

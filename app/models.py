@@ -265,6 +265,7 @@ class Community(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     website: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    keywords: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     created_by_user_id: Mapped[PyUUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),

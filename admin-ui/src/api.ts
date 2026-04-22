@@ -175,6 +175,7 @@ export type Community = {
   name: string;
   description: string;
   website: string | null;
+  keywords: string | null;
   created_by_user_id: string | null;
   created_at: string;
 };
