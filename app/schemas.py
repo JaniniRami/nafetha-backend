@@ -108,7 +108,7 @@ class OnboardingIn(BaseModel):
     graduation_year: int = Field(ge=1900, le=3000)
 
     # The user chooses which GPA scale they are entering.
-    # Example: if gpa_scale=5 then gpa_value is out of 5.
+    # Example: if gpa_scale=4 then gpa_value is out of 4.
     gpa_scale: int
     gpa_value: Decimal = Field(ge=0)
 
@@ -125,8 +125,8 @@ class OnboardingIn(BaseModel):
     @field_validator("gpa_scale")
     @classmethod
     def validate_gpa_scale(cls, v: int) -> int:
-        if v not in (5, 100):
-            raise ValueError("gpa_scale must be 5 or 100")
+        if v not in (4, 100):
+            raise ValueError("gpa_scale must be 4 or 100")
         return v
 
     @field_validator("gpa_value")

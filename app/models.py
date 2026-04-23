@@ -66,7 +66,7 @@ class UserProfile(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "gpa_scale IN (5, 100)",
+            "gpa_scale IN (4, 100)",
             name="ck_user_profiles_gpa_scale_valid",
         ),
         CheckConstraint(
