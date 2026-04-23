@@ -5,8 +5,8 @@ psycopg2-binary>=2.9.10
 python-dotenv>=1.0.1
 alembic>=1.14.0
 passlib[bcrypt]>=1.7.4
-# passlib 1.7.4 is incompatible with bcrypt 5.x (ValueError during backend init / detect_wrap_bug).
-bcrypt>=4.0.1,<5
+# Passlib 1.7.4 expects bcrypt metadata removed in bcrypt>=4.1.
+bcrypt==4.0.1
 sqladmin>=0.20.0
 email-validator>=2.2.0
 PyJWT>=2.8.0

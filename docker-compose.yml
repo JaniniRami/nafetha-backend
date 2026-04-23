@@ -33,6 +33,7 @@ services:
     # Persist LinkedIn session.json and scraper output; requires this repo path on the host
     volumes:
       - ./nafetha-scrapers:/app/nafetha-scrapers
+      - ./data:/app/data
     networks:
       - nafetha
       - postgres_net
