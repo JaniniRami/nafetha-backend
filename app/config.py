@@ -45,6 +45,7 @@ HEADLESS_MODE = os.getenv("HEADLESS_MODE", "").lower() in ("1", "true", "yes")
 
 # Optional: admin AI display-field generation (local Ollama). Set OLLAMA_HOST if not default.
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b").strip()
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
 
 # Semantic profile matching (SentenceTransformers + cosine similarity).
 PROFILE_MATCH_MODEL_NAME = os.getenv("PROFILE_MATCH_MODEL_NAME", "all-MiniLM-L6-v2").strip()

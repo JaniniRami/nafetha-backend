@@ -8,6 +8,7 @@ import NahnoScraper from "./pages/NahnoScraper";
 import TanqeebScraper from "./pages/TanqeebScraper";
 import Jobs from "./pages/Jobs";
 import Volunteering from "./pages/Volunteering";
+import SystemReset from "./pages/SystemReset";
 import { apiFetch, type MeResponse } from "./api";
 
 function useSession() {
@@ -67,6 +68,9 @@ function Layout({ children }: { children: React.ReactNode }) {
             className={({ isActive }) => `app-header__link${isActive ? " app-header__link--active" : ""}`}
           >
             Nahno scraper
+          </NavLink>
+          <NavLink to="/system-reset" className={({ isActive }) => `app-header__link${isActive ? " app-header__link--active" : ""}`}>
+            System reset
           </NavLink>
         </nav>
         <span className="spacer" />
@@ -184,6 +188,14 @@ export default function App() {
         element={
           <RequireAuth>
             <TanqeebScraper />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/system-reset"
+        element={
+          <RequireAuth>
+            <SystemReset />
           </RequireAuth>
         }
       />

@@ -1,0 +1,122 @@
+{
+  "Computer Science": {
+    "Full-Stack Debugging and Observability": "Mastering full-stack debugging and observability enables computer science graduates to identify and resolve complex software issues efficiently.",
+    "AI API Integration (LLM Orchestration)": "Mastering AI API integration enables computer science graduates to build intelligent applications and automate business processes with language models.",
+    "Cloud Native Development (Docker & GitHub Actions)": "Developing cloud native applications with Docker and GitHub Actions enhances deployment efficiency and scalability in modern software development environments."
+  },
+  "Software Engineering": {
+    "Test-Driven Development (TDD) for Enterprise Apps": "Mastering TDD ensures high-quality enterprise apps by writing automated tests first, reducing bugs and improving code maintainability.",
+    "Microservices and System Architecture Design": "Developing microservices and system architecture design skills enables software engineers to build scalable, maintainable, and efficient large-scale systems.",
+    "SaaS Multi-tenancy Implementation": "Implementing SaaS multi-tenancy enables developers to create scalable and secure applications that serve multiple customers with isolated data environments."
+  },
+  "Data Science and Artificial Intelligence": {
+    "Generative AI Fine-tuning and RAG Implementation": "Fine-tuning generative AI models with RAG implementation enhances data science applications in natural language processing and computer vision tasks.",
+    "Data Storytelling and Power BI Visualization": "Developing data storytelling skills with Power BI visualization enables data scientists to effectively communicate insights and drive business decisions.",
+    "MLOps and Model Deployment Pipelines": "Mastering MLOps enables data scientists to deploy AI models efficiently, ensuring scalability, reliability, and reproducibility in production environments."
+  },
+  "Cybersecurity": {
+    "Security Operations Center (SOC) Triage and IR": "Developing SOC triage and incident response skills enhances cybersecurity professionals' ability to rapidly respond to threats and minimize damage.",
+    "Cloud Security Posture Management (CSPM)": "Mastering CSPM helps cybersecurity professionals identify and remediate cloud security risks, ensuring compliance and protecting sensitive data in cloud environments.",
+    "DevSecOps and Automated Security Scanning": "Developing DevSecOps skills enables cybersecurity professionals to integrate security into the development lifecycle, reducing vulnerabilities and improving overall system reliability."
+  },
+  "Computer Engineering": {
+    "Embedded Systems with IoT Protocol Integration": "Mastering embedded systems with IoT protocol integration enhances the development of smart devices and systems for real-world applications in computer engineering.",
+    "Edge AI Deployment for Hardware": "Mastering edge AI deployment for hardware enables the creation of efficient, real-time AI solutions for IoT devices and embedded systems.",
+    "RTOS (Real-Time Operating Systems) Programming": "Understanding RTOS programming is essential for designing embedded systems and developing efficient software for real-time applications in industries like automotive and aerospace."
+  },
+  "Network Engineering": {
+    "Software-Defined Networking (SDN) and SD-WAN": "Mastering SDN and SD-WAN enhances network scalability, security, and efficiency, aligning with industry demands for flexible and automated network management.",
+    "Network Automation with Python and Ansible": "Mastering network automation with Python and Ansible enhances job prospects in IT infrastructure management and DevOps roles.",
+    "Hybrid Cloud Networking (VPN & Direct Connect)": "Understanding hybrid cloud networking enables network engineers to design and implement secure connections between on-premises data centers and cloud providers."
+  },
+  "Information Technology": {
+    "IT Governance and Compliance (ISO 27001 Basics)": "Understanding IT governance and compliance with ISO 27001 basics ensures secure data management and adherence to industry standards in the IT sector.",
+    "Enterprise Resource Planning (ERP) Configuration": "Understanding ERP configuration enables IT professionals to optimize business processes, improve efficiency, and enhance organizational productivity.",
+    "Digital Transformation Project Management": "Mastering digital transformation project management enables IT professionals to lead successful business transformations and drive organizational innovation."
+  },
+  "Mechatronics Engineering": {
+    "PLC and SCADA Programming for Industrial Automation": "Developing expertise in PLC and SCADA programming enhances job prospects in industrial automation, manufacturing, and process control engineering sectors.",
+    "Robotic Process Automation (RPA) and Cobot Integration": "Mastering RPA and cobot integration enhances mechatronic engineers' ability to design efficient automation systems for manufacturing industries.",
+    "Digital Twin Modeling and Simulation": "Developing digital twin models enables Mechatronics Engineers to simulate, test, and optimize complex systems before physical implementation, reducing design errors and costs."
+  },
+  "Renewable Energy Engineering": {
+    "Solar PV System Design with PVSyst and Helioscope": "Developing proficiency in solar PV system design software enhances career prospects in the renewable energy industry for engineers.",
+    "Energy Auditing and Management (ISO 50001 Basics)": "Understanding energy auditing and management principles helps Renewable Energy Engineers optimize building efficiency and reduce operational costs.",
+    "Battery Energy Storage Systems (BESS) Integration": "Understanding BESS integration is crucial in Renewable Energy Engineering as it enables efficient energy storage and grid stability for sustainable power distribution."
+  },
+  "Electrical Engineering": {
+    "Low Voltage (LV) Electrical Design for Smart Buildings": "Developing low voltage electrical design skills for smart buildings enhances career prospects in the growing field of building automation and energy efficiency.",
+    "Power System Analysis using ETAP or DIgSILENT": "Mastering power system analysis with ETAP or DIgSILENT enhances career prospects in electrical engineering and utilities industries.",
+    "Electric Vehicle (EV) Charging Infrastructure Design": "Understanding EV charging infrastructure design is crucial for electrical engineers to contribute to the development of sustainable transportation systems and reduce carbon emissions."
+  },
+  "Mechanical Engineering": {
+    "HVAC Design with BIM (Revit) and HAP Software": "Developing expertise in HVAC design with BIM and HAP software enhances mechanical engineers' ability to create efficient and cost-effective building systems.",
+    "Additive Manufacturing (3D Printing) for Prototyping": "Understanding additive manufacturing enables mechanical engineers to rapidly prototype and test complex designs, reducing development time and costs.",
+    "Predictive Maintenance and Vibration Analysis": "Developing predictive maintenance skills helps mechanical engineers reduce equipment downtime, increase efficiency, and minimize costs in industrial settings."
+  },
+  "Civil Engineering": {
+    "BIM (Building Information Modeling) Coordination and Revit": "Mastering BIM coordination in Revit enhances civil engineers' ability to design and construct complex infrastructure projects efficiently.",
+    "Quantity Surveying with CostX or Candy Software": "Develops expertise in estimating construction costs and managing budgets using specialized software like CostX or Candy.",
+    "Infrastructure Asset Management and Rehabilitation": "Developing infrastructure asset management skills enables civil engineers to optimize maintenance schedules, reduce costs, and extend the lifespan of critical infrastructure."
+  },
+  "Chemical Engineering": {
+    "Process Safety Management (PSM) and HAZOP Analysis": "Understanding PSM and HAZOP Analysis is crucial for chemical engineers to identify and mitigate potential hazards in industrial processes and ensure workplace safety.",
+    "Wastewater Treatment and Desalination Plant Operations": "Understanding wastewater treatment and desalination plant operations is crucial for chemical engineers to design efficient water management systems in industrial settings.",
+    "Green Hydrogen and Carbon Capture Technologies": "Developing green hydrogen and carbon capture technologies is crucial for reducing greenhouse gas emissions in chemical engineering processes and industrial operations."
+  },
+  "Industrial Engineering": {
+    "Lean Six Sigma Green Belt Applications": "Developing Lean Six Sigma Green Belt applications enhances industrial engineering projects with data-driven methodologies for process improvement and efficiency.",
+    "Supply Chain Analytics and Logistics Optimization": "Developing supply chain analytics and logistics optimization skills enhances industrial engineers' ability to minimize costs and maximize efficiency in production processes.",
+    "Facility Layout Design using FlexSim or Arena": "Mastering facility layout design with simulation software like FlexSim or Arena enhances industrial engineering skills in process optimization and efficiency improvement."
+  },
+  "Architecture": {
+    "Parametric Design and Computational Modeling (Grasshopper)": "Mastering parametric design in Grasshopper enhances architectural innovation, streamlines complex modeling processes, and boosts career opportunities in sustainable building design.",
+    "Sustainable Building Certification (LEED/EDGE) Documentation": "Developing LEED or EDGE documentation skills enhances architects' ability to design and implement environmentally responsible buildings that meet industry standards.",
+    "Virtual Reality (VR) Walkthroughs and Unreal Engine Rendering": "Mastering VR walkthroughs and Unreal Engine rendering enhances architectural visualization skills, allowing for immersive client presentations and data-driven design decisions."
+  },
+  "Interior Design": {
+    "Sourcing and Sustainable Material Specification": "Developing expertise in sustainable material specification enhances interior design projects with eco-friendly solutions, appealing to environmentally conscious clients.",
+    "Kitchen and Bath Specialized Technical Drafting": "Develops expertise in creating precise technical drawings for kitchen and bath designs, enhancing design precision and client satisfaction.",
+    "Smart Home Technology Integration and Lighting Design": "Understanding smart home technology integration enhances interior design skills, enabling the creation of efficient, sustainable, and technologically advanced spaces."
+  },
+  "Graphic Design": {
+    "UX/UI Design and Prototyping (Figma/Adobe XD)": "Mastering UX/UI design and prototyping with Figma or Adobe XD enhances graphic designers' ability to create user-centered digital products.",
+    "Motion Graphics and 2D Animation (After Effects)": "Mastering motion graphics and 2D animation in After Effects enhances visual storytelling skills for graphic designers in advertising, film, and digital media industries.",
+    "AI-Assisted Content Creation and Prompt Engineering": "Mastering AI-assisted content creation enhances graphic design skills with efficient automation of repetitive tasks and innovative visual storytelling."
+  },
+  "Business Administration": {
+    "Agile Project Management (Scrum/Kanban)": "Mastering Agile Project Management enhances business administration skills, enabling efficient team collaboration and adaptive project delivery in dynamic environments.",
+    "Customer Relationship Management (CRM) Administration": "Mastering CRM administration in business administration enables effective customer engagement and data-driven decision making for organizational success.",
+    "Change Management for Digital Transformation": "Developing change management skills in digital transformation enables business administrators to lead successful organizational shifts and drive innovation."
+  },
+  "Business Information Systems": {
+    "ERP System Implementation (SAP or Oracle Fundamentals)": "Understanding ERP system implementation enables businesses to streamline operations, improve efficiency, and make data-driven decisions with accuracy.",
+    "Business Process Modeling and Notation (BPMN)": "Understanding BPMN enables business analysts to create visual representations of business processes, improving efficiency and communication with stakeholders.",
+    "Data Governance and Master Data Management": "Developing data governance and master data management skills ensures accurate and reliable business intelligence for informed strategic decision-making."
+  },
+  "Accounting": {
+    "Tax Compliance and Jordan Income & Sales Tax Law": "Understanding tax compliance and Jordan's income and sales tax law is essential for accounting professionals to ensure accurate financial reporting and avoid legal issues.",
+    "Cloud Accounting Software (Xero/QuickBooks/Zoho)": "Proficiency in cloud accounting software enhances financial management skills and increases job prospects in the field of accounting.",
+    "Audit Automation and Forensic Accounting Tools": "Developing expertise in audit automation and forensic accounting tools enhances career prospects in public accounting and financial investigation."
+  },
+  "Finance and Banking": {
+    "Financial Modeling and Valuation (Advanced Excel)": "Developing advanced financial modeling skills enables finance professionals to create accurate forecasts, valuations, and investment decisions.",
+    "FinTech Product Management and Digital Wallets": "Understanding FinTech product management and digital wallets enhances your ability to develop innovative financial solutions for the modern banking industry.",
+    "Anti-Money Laundering (AML) and KYC Regulations": "Understanding AML and KYC regulations is crucial for finance professionals to prevent financial crimes and maintain regulatory compliance."
+  },
+  "Risk Management": {
+    "ESG (Environmental, Social, and Governance) Reporting": "Developing ESG reporting skills helps risk management professionals identify and mitigate environmental and social risks that impact business operations and reputation.",
+    "Business Continuity Planning (BCP) Coordination": "Developing BCP coordination skills enables risk management professionals to ensure business operations continue uninterrupted during disruptions and crises.",
+    "Operational Risk Analytics and Dashboards": "Developing operational risk analytics and dashboards helps organizations identify and mitigate potential risks, ensuring business continuity and compliance."
+  },
+  "Marketing": {
+    "Brand Storytelling and Content Strategy": "Developing a brand's narrative voice and content strategy helps businesses connect with target audiences and drive customer engagement.",
+    "Market Research Analysis using SPSS or Tableau": "Developing market research analysis skills enhances marketing professionals' ability to inform data-driven decisions and drive business growth.",
+    "Customer Journey Mapping and Experience Design": "Understanding customer journey mapping enables marketers to create tailored experiences that drive engagement, retention, and loyalty."
+  },
+  "Digital Marketing": {
+    "Performance Marketing and Growth Hacking": "Developing performance marketing skills enables digital marketers to drive efficient ROI, maximize conversions, and fuel business growth.",
+    "Marketing Automation (HubSpot/Mailchimp Workflows)": "Mastering marketing automation enables efficient campaign execution, lead nurturing, and data-driven decision making in digital marketing roles.",
+    "Advanced SEO and Technical Site Auditing": "Developing advanced SEO skills enables digital marketers to improve website visibility, drive organic traffic, and increase online conversions."
+  }
+}

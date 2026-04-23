@@ -9,7 +9,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -22,7 +22,15 @@ from app.config import HEADLESS_MODE, OLLAMA_MODEL
 from app.database import get_db
 from app.database import SessionLocal
 from app.deps import require_superadmin
-from app.models import ScrapedCompany, ScrapedJob, User, VolunteeringEvent
+from app.models import (
+    ProfilePrerequisite,
+    ScrapedCompany,
+    ScrapedJob,
+    User,
+    UserRoadmap,
+    UserRoadmapStep,
+    VolunteeringEvent,
+)
 from app.scraper.services.auth import BrowserManager
 from app.volunteering_keyword_ai import classify_volunteering_keyword
 from app.schemas import (
@@ -1357,3 +1365,36 @@ def admin_delete_volunteering_event(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Volunteering event not found")
     db.delete(row)
     db.commit()
+
+
+@router.delete("/reset/skills")
+def admin_reset_skills_data(
+    _: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    """
+    Delete all saved user prerequisite selections (per skill).
+    Does not delete profile interests.
+    """
+    deleted_prerequisites = db.execute(delete(ProfilePrerequisite)).rowcount or 0
+    db.commit()
+    return {
+        "deleted_profile_prerequisites": int(deleted_prerequisites),
+    }
+
+
+@router.delete("/reset/roadmaps")
+def admin_reset_saved_roadmaps(
+    _: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    """
+    Delete all saved generated roadmaps and steps.
+    """
+    deleted_steps = db.execute(delete(UserRoadmapStep)).rowcount or 0
+    deleted_roadmaps = db.execute(delete(UserRoadmap)).rowcount or 0
+    db.commit()
+    return {
+        "deleted_roadmap_steps": int(deleted_steps),
+        "deleted_roadmaps": int(deleted_roadmaps),
+    }

@@ -39,6 +39,15 @@ export type MeUser = {
 
 export type MeResponse = MeUser & { setup?: unknown };
 
+export type AdminResetSkillsResponse = {
+  deleted_profile_prerequisites: number;
+};
+
+export type AdminResetRoadmapsResponse = {
+  deleted_roadmap_steps: number;
+  deleted_roadmaps: number;
+};
+
 export type Company = {
   id: string;
   company_name: string;

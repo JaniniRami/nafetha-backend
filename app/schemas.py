@@ -187,6 +187,88 @@ class InterestsOut(BaseModel):
     has_interests: bool
 
 
+class MajorDemandSkillsOut(BaseModel):
+    """Top in-demand skills for the authenticated user's major."""
+
+    major: str
+    skills: list["MajorDemandSkillWithReasonOut"] | None
+
+
+class MajorDemandSkillWithReasonOut(BaseModel):
+    skill: str
+    reason: str | None
+    roadmap_generated: bool
+    completed: bool
+
+
+class SkillPrerequisitesOut(BaseModel):
+    skill: str
+    prerequisites: list[str] | None
+
+
+class SelectedPrerequisitesReplaceIn(BaseModel):
+    """Replace the whole selected prerequisites set for the authenticated user."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    skill: str = Field(min_length=1, max_length=255)
+    prerequisites: list[str] = Field(default_factory=list, max_length=300)
+
+    @field_validator("skill", mode="before")
+    @classmethod
+    def normalize_skill(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("prerequisites")
+    @classmethod
+    def normalize_prerequisites(cls, v: list[str]) -> list[str]:
+        seen: set[str] = set()
+        out: list[str] = []
+        for raw in v:
+            s = str(raw).strip()
+            if not s:
+                raise ValueError("Each prerequisite must be a non-empty string")
+            if len(s) > 255:
+                raise ValueError("Each prerequisite must be at most 255 characters")
+            key = s.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(s)
+        return out
+
+
+class SelectedPrerequisitesOut(BaseModel):
+    skill: str
+    prerequisites: list[str]
+    has_prerequisites: bool
+
+
+class RoadmapStepOut(BaseModel):
+    id: UUID
+    main: str
+    technicalComplement: str
+    toolOrSoftSkill: str
+    completed: bool
+
+
+class RoadmapOut(BaseModel):
+    roadmap_id: UUID
+    goal_skill: str
+    steps_count: int
+    all_completed: bool
+    roadmap: list[RoadmapStepOut]
+
+
+class RoadmapStepCompletionUpdateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    step_ids: list[UUID] = Field(default_factory=list, max_length=100)
+    completed: bool = True
+
+
 class ScrapedJobOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

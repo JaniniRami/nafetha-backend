@@ -1,0 +1,1037 @@
+[
+    {
+    "Computer Science": {
+      "Full-Stack Debugging and Observability": [
+        "Chrome DevTools (Network and Console tabs)",
+        "REST API status codes (2xx, 4xx, 5xx)",
+        "JavaScript Try/Catch error handling",
+        "Print statement/logging techniques",
+        "Basic SQL query execution",
+        "Version control with Git",
+        "Understanding Client-Server architecture",
+        "Linux terminal navigation (cd, ls, cat)",
+        "JSON data structure parsing",
+        "Asynchronous programming (Promises/Async-Await)",
+        "Environment variable configuration (.env files)",
+        "HTTP Request/Response headers"
+      ],
+      "AI API Integration (LLM Orchestration)": [
+        "Python programming fundamentals",
+        "API Key authentication (Bearer tokens)",
+        "Postman for testing endpoints",
+        "Prompt engineering basics",
+        "Data serialization (Python dictionaries to JSON)",
+        "CURL commands for API requests",
+        "Pip package management",
+        "String manipulation and regex",
+        "Understanding rate limiting and latency",
+        "Virtual environment setup (venv/conda)",
+        "Markdown syntax",
+        "Boolean logic and conditional flows"
+      ],
+      "Cloud Native Development (Docker & GitHub Actions)": [
+        "Bash scripting basics",
+        "YAML file syntax",
+        "Operating system virtualization concepts",
+        "SSH key management",
+        "Application port mapping (localhost:8080)",
+        "Continuous Integration (CI) concepts",
+        "Software dependency management (npm/maven)",
+        "File permissions in Unix",
+        "Network protocols (TCP/IP)",
+        "Remote repository workflows (Clone/Push/Pull)",
+        "Web server basics (Nginx/Apache)",
+        "Microservices architecture theory"
+      ]
+    }
+  },
+  {
+    "Software Engineering": {
+    "Test-Driven Development (TDD) for Enterprise Apps": [
+    "Unit testing fundamentals with JUnit or PyTest",
+    "Mocking and Stubbing concepts using Mockito",
+    "Object-Oriented Programming (OOP) principles",
+    "Dependency Injection (DI) patterns",
+    "Code coverage metrics and analysis",
+    "The Red-Green-Refactor cycle",
+    "Assertion libraries (Chai, AssertJ)",
+    "Integration testing vs. Unit testing",
+    "Maven or Gradle build automation",
+    "Automated test runner configuration",
+    "Clean Code principles (SOLID)",
+    "Regression testing workflows"
+    ],
+    "Microservices and System Architecture Design": [
+    "Service-Oriented Architecture (SOA) basics",
+    "Message brokers (RabbitMQ or Apache Kafka)",
+    "API Gateway patterns",
+    "Database sharding and partitioning",
+    "CAP Theorem and distributed systems theory",
+    "Inter-process communication (gRPC or REST)",
+    "Load balancing algorithms (Round Robin)",
+    "Circuit Breaker and Retry patterns",
+    "Event-driven architecture concepts",
+    "Data consistency models (Eventual Consistency)",
+    "UML Class and Sequence diagrams",
+    "Service discovery mechanisms"
+    ],
+    "SaaS Multi-tenancy Implementation": [
+    "Relational Database Schema design",
+    "Row-level security (RLS) in PostgreSQL",
+    "Identity and Access Management (IAM)",
+    "OAuth2 and OpenID Connect protocols",
+    "Subdomain-based routing (https://www.google.com/search?q=tenant1.example.com)",
+    "Data isolation strategies (Silo vs. Pool)",
+    "JWT (JSON Web Token) payload handling",
+    "Middleware development for request filtering",
+    "Subscription billing logic (Stripe API integration)",
+    "Cache invalidation strategies (Redis)",
+    "Cross-Origin Resource Sharing (CORS) policy",
+    "Scalability vs. Elasticity definitions"
+    ]
+    }
+    },
+    {
+        "Data Science and Artificial Intelligence": {
+          "Generative AI Fine-tuning and RAG Implementation": [
+            "Python programming for data science (Pandas/NumPy)",
+            "Transformer architecture basics (Attention mechanism)",
+            "Vector databases (Pinecone or Milvus)",
+            "Text embeddings and cosine similarity",
+            "Tokenization and context window limits",
+            "Hugging Face Transformers library",
+            "Large Language Model (LLM) prompting",
+            "Data preprocessing for Natural Language Processing",
+            "GPU memory management (CUDA basics)",
+            "Supervised learning principles",
+            "Hyperparameter tuning (Learning rate, Epochs)",
+            "API integration with OpenAI or Anthropic"
+          ],
+          "Data Storytelling and Power BI Visualization": [
+            "Exploratory Data Analysis (EDA) techniques",
+            "SQL Data manipulation (JOINs, Group By)",
+            "Principles of Gestalt visual perception",
+            "Data cleaning and normalization",
+            "DAX (Data Analysis Expressions) basics",
+            "Power Query/M language fundamentals",
+            "Statistical measures (Mean, Median, Standard Deviation)",
+            "Choosing appropriate chart types (Bar vs. Scatter)",
+            "KPI (Key Performance Indicator) definition",
+            "Dashboard layout and user experience design",
+            "Data storytelling narrative structures",
+            "Filtering and Slicing datasets"
+          ],
+          "MLOps and Model Deployment Pipelines": [
+            "Machine Learning lifecycle (Train/Test/Split)",
+            "Docker containerization for ML models",
+            "Model versioning (DVC or MLflow)",
+            "Flask or FastAPI for model serving",
+            "Scikit-learn pipeline objects",
+            "Git-based collaborative development",
+            "Model evaluation metrics (F1-Score, RMSE)",
+            "Linux command line and Cron jobs",
+            "Cloud storage services (AWS S3 or GCS)",
+            "Concept drift and data drift theory",
+            "Feature engineering automation",
+            "Continuous Integration/Continuous Deployment (CI/CD) basics"
+          ]
+        }
+      },
+      {
+        "Cybersecurity": {
+          "Security Operations Center (SOC) Triage and IR": [
+            "TCP/IP networking model and port numbers",
+            "SIEM fundamental concepts (Splunk or ELK Stack)",
+            "Wireshark packet analysis",
+            "Common attack vectors (Phishing, Brute Force, SQLi)",
+            "Windows and Linux event log navigation",
+            "MITRE ATT&CK framework familiarity",
+            "Malware analysis basics (Static vs. Dynamic)",
+            "ITIL incident management lifecycle",
+            "Network security basics (Firewalls, IDS/IPS)",
+            "Endpoint Detection and Response (EDR) concepts",
+            "Basic scripting for log parsing (Python or PowerShell)",
+            "Hashing algorithms (MD5, SHA-256) for IOCs"
+          ],
+          "Cloud Security Posture Management (CSPM)": [
+            "Identity and Access Management (IAM) roles and policies",
+            "Shared Responsibility Model for Cloud Providers",
+            "Virtual Private Cloud (VPC) and Subnet configuration",
+            "AWS Config or Azure Policy basics",
+            "Cloud compliance frameworks (SOC2, HIPAA, GDPR)",
+            "Encryption at rest and in transit (KMS/TLS)",
+            "Cloud API activity monitoring (CloudTrail)",
+            "Infrastructure as Code (IaC) principles",
+            "Public vs. Private cloud storage permissions",
+            "Serverless security considerations",
+            "Misconfiguration-based vulnerability types",
+            "Security Group and Network ACL management"
+          ],
+          "DevSecOps and Automated Security Scanning": [
+            "CI/CD pipeline architecture (GitLab CI or Jenkins)",
+            "Static Application Security Testing (SAST) basics",
+            "Dynamic Application Security Testing (DAST) basics",
+            "Software Composition Analysis (SCA) for dependencies",
+            "Container security and image vulnerability scanning",
+            "Git Hooks for pre-commit security checks",
+            "Secret management (HashiCorp Vault or GitHub Secrets)",
+            "Terraform or CloudFormation basics",
+            "Automated unit testing workflows",
+            "Docker image layering and security best practices",
+            "OWASP Top 10 vulnerability awareness",
+            "Linux command-line security auditing"
+          ]
+        }
+      },
+      {
+        "Computer Engineering": {
+          "Embedded Systems with IoT Protocol Integration": [
+            "C/C++ programming for microcontrollers",
+            "GPIO pin configuration and digital I/O",
+            "I2C and SPI serial communication protocols",
+            "Understanding UART/RS-232 basics",
+            "Pulse Width Modulation (PWM) for hardware control",
+            "Basic circuit analysis (Ohm’s Law, Resistors, LEDs)",
+            "Wi-Fi and Bluetooth module interfacing",
+            "MQTT messaging protocol basics",
+            "Read/Write operations on EEPROM or Flash memory",
+            "Analog-to-Digital Conversion (ADC) principles",
+            "Breadboarding and use of jumper wires",
+            "Power consumption and battery management concepts"
+          ],
+          "Edge AI Deployment for Hardware": [
+            "Python-based machine learning (TensorFlow or PyTorch)",
+            "Model quantization and compression techniques",
+            "Deep Learning basics (Neural Network layers)",
+            "Image processing fundamentals with OpenCV",
+            "Working with FPGA or TPU hardware accelerators",
+            "Linux terminal usage for embedded devices (Raspberry Pi)",
+            "Floating-point vs. Fixed-point arithmetic",
+            "ONNX (Open Neural Network Exchange) format",
+            "Memory constraints and buffer management",
+            "Camera and sensor data acquisition",
+            "C++ inference engine usage",
+            "Vectorization and SIMD instructions"
+          ],
+          "RTOS (Real-Time Operating Systems) Programming": [
+            "Interrupt Service Routines (ISR) and handling",
+            "Multithreading and Concurrency fundamentals",
+            "Deadlock and Race Condition theory",
+            "Semaphore and Mutex synchronization",
+            "Priority-based task scheduling",
+            "Context switching mechanisms",
+            "Stack and Heap memory allocation in C",
+            "Pointer manipulation and memory mapping",
+            "Timer and Counter peripheral configuration",
+            "Bitwise operations (masking, shifting, toggling)",
+            "Understanding deterministic system behavior",
+            "Hardware abstraction layer (HAL) usage"
+          ]
+        }
+      },
+      {
+        "Network Engineering": {
+          "Software-Defined Networking (SDN) and SD-WAN": [
+            "OSI Model layers 1-4",
+            "Control Plane vs. Data Plane separation theory",
+            "VLAN tagging and trunking (802.1Q)",
+            "Standard routing protocols (OSPF, BGP)",
+            "Understanding Centralized Management vs. Distributed Routing",
+            "Traffic engineering and Path Selection basics",
+            "Virtual Extensible LAN (VXLAN) concepts",
+            "Network Address Translation (NAT) types",
+            "Quality of Service (QoS) prioritization",
+            "IPsec and Tunneling fundamentals",
+            "API interaction basics (Northbound/Southbound)",
+            "Switching fabric architecture"
+          ],
+          "Network Automation with Python and Ansible": [
+            "Python data types (Lists, Dictionaries)",
+            "SSH protocol and Key-based authentication",
+            "YAML syntax for configuration files",
+            "Jinjava2 template basics",
+            "Netmiko or Paramiko library usage",
+            "Linux CLI and environment variables",
+            "JSON/XML data parsing",
+            "Idempotency concepts in automation",
+            "Regular Expressions (Regex) for log scraping",
+            "Git branching and Pull Requests",
+            "Inventory file management",
+            "Basic Logic (If-Then, For-Loops)"
+          ],
+          "Hybrid Cloud Networking (VPN & Direct Connect)": [
+            "Subnetting and CIDR notation",
+            "BGP Peering and Autonomous Systems (AS)",
+            "Static vs. Dynamic Routing",
+            "Virtual Private Gateway (VGW) concepts",
+            "Private vs. Public IP addressing",
+            "Firewall rule configuration (Stateful vs. Stateless)",
+            "Domain Name System (DNS) resolution flows",
+            "Bandwidth and Latency measurement tools",
+            "Colocation facility basics",
+            "Encapsulation protocols (GRE/UDP)",
+            "Multi-protocol Label Switching (MPLS) basics",
+            "Certificate-based authentication (TLS/SSL)"
+          ]
+        }
+      },
+      {
+        "Information Technology": {
+          "IT Governance and Compliance (ISO 27001 Basics)": [
+            "Information Security Management System (ISMS) definitions",
+            "Risk Assessment methodologies",
+            "Confidentiality, Integrity, and Availability (CIA) Triad",
+            "Access Control Policy basics",
+            "Physical security measures",
+            "Business Continuity Planning (BCP) concepts",
+            "Internal vs. External auditing procedures",
+            "Asset Management and Inventory tracking",
+            "Legal and regulatory landscape (GDPR/HIPAA)",
+            "Document control and record keeping",
+            "Security awareness training fundamentals",
+            "Incident Response reporting structures"
+          ],
+          "Enterprise Resource Planning (ERP) Configuration": [
+            "Relational Database Management Systems (RDBMS)",
+            "Business process mapping (Order-to-Cash, Procure-to-Pay)",
+            "Master Data Management (Customer, Vendor, Material)",
+            "SQL Data manipulation basics",
+            "User Role and Permission mapping",
+            "Accounting and General Ledger basics",
+            "Supply Chain Management (SCM) workflows",
+            "Data migration and ETL (Extract, Transform, Load)",
+            "Legacy system integration concepts",
+            "Functional requirement gathering",
+            "System Testing (UAT/SIT)",
+            "XML or CSV data formatting"
+          ],
+          "Digital Transformation Project Management": [
+            "Agile and Scrum methodologies",
+            "Project Management Software (Jira or Trello)",
+            "Gantt Chart and Timeline creation",
+            "Stakeholder Analysis and Communication plans",
+            "Change Management theory (ADKAR model)",
+            "Key Performance Indicator (KPI) tracking",
+            "Budgeting and Resource Allocation",
+            "Cloud migration strategies (SaaS, PaaS, IaaS)",
+            "SDLC (Software Development Life Cycle) phases",
+            "Gap Analysis (As-Is vs. To-Be)",
+            "Minimum Viable Product (MVP) scoping",
+            "Risk Mitigation strategies"
+          ]
+        }
+      },
+      {
+        "Mechatronics Engineering": {
+          "PLC and SCADA Programming for Industrial Automation": [
+            "Ladder Logic fundamentals",
+            "Boolean algebra and logic gates",
+            "Knowledge of NO/NC contact types",
+            "Electrical circuit schematics reading",
+            "Understanding of 24V DC control circuits",
+            "Basics of industrial sensors (Inductive, Capacitive)",
+            "PID control theory basics",
+            "Relay logic and contactors",
+            "RS-232/RS-485 serial communication basics",
+            "Pulse Width Modulation (PWM) concepts",
+            "Interpreting P&ID (Piping and Instrumentation Diagrams)",
+            "Basic HMI (Human Machine Interface) design principles"
+          ],
+          "Robotic Process Automation (RPA) and Cobot Integration": [
+            "Python scripting basics",
+            "Coordinate systems (Cartesian, Cylindrical)",
+            "Forward kinematics concepts",
+            "End-effector/Gripper mechanics",
+            "Collision detection safety standards",
+            "Conditional logic (If-Then-Else statements)",
+            "Object-oriented programming basics",
+            "Flowcharting and process mapping",
+            "Basic servo motor operation",
+            "Understanding of Torque and Load calculations",
+            "API calling fundamentals",
+            "I/O mapping and configuration"
+          ],
+          "Digital Twin Modeling and Simulation": [
+            "3D CAD modeling (SolidWorks or AutoCAD)",
+            "Finite Element Analysis (FEA) basics",
+            "Multibody dynamics physics",
+            "MATLAB/Simulink environment familiarity",
+            "Differential equations for system modeling",
+            "Data telemetry and MQTT protocol basics",
+            "Cloud storage fundamentals (AWS/Azure)",
+            "Material science properties (Stress, Strain)",
+            "Time-series data analysis",
+            "Virtual Reality (VR) hardware basics",
+            "Numerical methods for simulation",
+            "Version control using Git"
+          ]
+        }
+      },
+      {
+        "Renewable Energy Engineering": {
+          "Solar PV System Design with PVSyst and Helioscope": [
+            "Photovoltaic effect physics",
+            "Solar irradiance and peak sun hours",
+            "Trigonometry for tilt and azimuth angles",
+            "Ohm’s Law and DC circuit analysis",
+            "Inverter conversion efficiency concepts",
+            "Standard Test Conditions (STC) vs. NOCT",
+            "Basic AutoCAD for site layouts",
+            "Understanding of shading analysis",
+            "Voltage drop calculations",
+            "Series and parallel string configuration",
+            "Knowledge of bypass and blocking diodes",
+            "Meteorological data (TMY3) interpretation"
+          ],
+          "Energy Auditing and Management (ISO 50001 Basics)": [
+            "Thermodynamics first law (Energy Balance)",
+            "Utility bill analysis and tariff structures",
+            "HVAC system operational basics",
+            "Lighting efficacy and lumen calculations",
+            "Boiler and steam system fundamentals",
+            "Power factor and reactive power",
+            "Data logging and sensor placement",
+            "Return on Investment (ROI) calculations",
+            "Net Present Value (NPV) analysis",
+            "Building envelope heat transfer",
+            "Statistical regression for energy baselines",
+            "Compressed air system basics"
+          ],
+          "Battery Energy Storage Systems (BESS) Integration": [
+            "Electrochemistry of Lithium-ion cells",
+            "State of Charge (SoC) and Depth of Discharge (DoD)",
+            "C-rate and discharge curves",
+            "Three-phase AC power systems",
+            "Transformer step-up/step-down basics",
+            "Thermal management and cooling cycles",
+            "Microgrid controller logic",
+            "Grid frequency and voltage regulation",
+            "Busbar and cable sizing",
+            "Basics of Battery Management Systems (BMS)",
+            "Electrical protection (Fuses and Circuit Breakers)",
+            "Energy density vs. Power density concepts"
+          ]
+        }
+      },
+      {
+        "Electrical Engineering": {
+          "Low Voltage (LV) Electrical Design for Smart Buildings": [
+            "Kirchhoff’s Voltage and Current Laws",
+            "Single-line diagram (SLD) interpretation",
+            "National Electrical Code (NEC) or IEC 60364 basics",
+            "Calculation of Total Connected Load",
+            "Phase balancing in three-phase systems",
+            "Standard wire gauge and ampacity tables",
+            "Grounding and bonding principles",
+            "Basic lighting control protocols (DALI or KNX)",
+            "Circuit breaker tripping curves",
+            "Short circuit current calculations",
+            "Voltage drop limit requirements",
+            "Power factor correction fundamentals"
+          ],
+          "Power System Analysis using ETAP or DIgSILENT": [
+            "Per-unit system (pu) calculations",
+            "Admittance and Impedance matrix construction",
+            "Newton-Raphson load flow theory",
+            "Symmetrical component analysis",
+            "Sub-transient and transient reactance",
+            "Transformer vector groups",
+            "Generator capability curves",
+            "Busbar configurations and topology",
+            "Active and Reactive power flow (P-Q control)",
+            "Harmonic distortion basics",
+            "Network contingency analysis (N-1 criteria)",
+            "Synchronous machine modeling"
+          ],
+          "Electric Vehicle (EV) Charging Infrastructure Design": [
+            "AC vs DC charging levels (Level 1, 2, and 3)",
+            "Type 1 and Type 2 connector standards",
+            "Maximum Demand and Diversity Factor",
+            "Inverter/Rectifier power electronics",
+            "Protection against Electric Shock (RCD Type B)",
+            "Basics of OCPP (Open Charge Point Protocol)",
+            "Grid-to-Vehicle (G2V) interaction",
+            "Thermal dissipation in power cabinets",
+            "Site plan reading and civil requirements",
+            "Energy meter integration (MID certified)",
+            "Surge Protection Device (SPD) selection",
+            "Load shedding and demand response logic"
+          ]
+        }
+      },
+      {
+        "Mechanical Engineering": {
+          "HVAC Design with BIM (Revit) and HAP Software": [
+            "Psychrometric chart interpretation",
+            "Principles of heat transfer (Conduction, Convection, Radiation)",
+            "Sensible and latent heat concepts",
+            "Fluid mechanics and pressure drop in ducts",
+            "Reading architectural floor plans",
+            "Thermodynamic refrigeration cycles",
+            "Basic 3D modeling navigation",
+            "Standard ASHRAE ventilation requirements",
+            "U-value calculations for building materials",
+            "Pump and fan laws",
+            "Coefficient of Performance (COP) basics",
+            "Understanding of dry-bulb and wet-bulb temperatures"
+          ],
+          "Additive Manufacturing (3D Printing) for Prototyping": [
+            "Parametric CAD modeling (Fusion 360 or Inventor)",
+            "Exporting and repairing STL/OBJ files",
+            "Knowledge of thermoplastic properties (PLA, ABS, PETG)",
+            "Understanding of FDM vs. SLA processes",
+            "Anisotropy in layered manufacturing",
+            "Infill patterns and structural integrity",
+            "Support structure geometry and overhangs",
+            "Tolerance and clearance for mechanical fits",
+            "G-code command structure",
+            "Bed leveling and first-layer adhesion physics",
+            "Post-processing techniques (Sanding, Chemical smoothing)",
+            "Basics of generative design"
+          ],
+          "Predictive Maintenance and Vibration Analysis": [
+            "Newton’s Second Law and harmonic motion",
+            "Fourier Transform (FFT) fundamentals",
+            "Resonance and critical speeds",
+            "Basics of rolling-element bearing design",
+            "Signal-to-noise ratio concepts",
+            "Rotational frequency (RPM to Hz) conversion",
+            "Understanding of damping and stiffness",
+            "Piezoelectric sensor (Accelerometer) operation",
+            "Time-domain vs. Frequency-domain plotting",
+            "Root Cause Analysis (RCA) methodology",
+            "Lubrication and friction fundamentals",
+            "Total Productive Maintenance (TPM) philosophy"
+          ]
+        }
+      },
+      {
+        "Civil Engineering": {
+          "BIM (Building Information Modeling) Coordination and Revit": [
+            "Parametric modeling principles",
+            "Reading 2D architectural blueprints",
+            "Structural framing systems knowledge",
+            "Spatial awareness and 3D visualization",
+            "Level of Development (LOD) definitions",
+            "Basics of IFC (Industry Foundation Classes) file formats",
+            "Understanding of MEP (Mechanical, Electrical, Plumbing) pathways",
+            "Clash detection logic",
+            "Collaborative workflows (Common Data Environment)",
+            "Standard construction symbology",
+            "Geometric Dimensioning and Tolerancing (GD&T)",
+            "Project lifecycle stages (Design to Decommissioning)"
+          ],
+          "Quantity Surveying with CostX or Candy Software": [
+            "Standard Method of Measurement (SMM) basics",
+            "Microsoft Excel for data manipulation",
+            "Bill of Quantities (BoQ) structure",
+            "Linear, area, and volume takeoff techniques",
+            "Unit rate analysis",
+            "Construction material pricing trends",
+            "Reading structural rebar schedules",
+            "Basic contract law (FIDIC or JCT basics)",
+            "Construction wastage factors",
+            "Subcontractor quotation comparison",
+            "Direct vs. Indirect cost differentiation",
+            "Percentage of completion methods"
+          ],
+          "Infrastructure Asset Management and Rehabilitation": [
+            "Pavement and concrete degradation mechanisms",
+            "Non-Destructive Testing (NDT) methods",
+            "GIS (Geographic Information Systems) mapping",
+            "Lifecycle Cost Analysis (LCCA)",
+            "Soil mechanics and foundation stability",
+            "Basics of hydraulic flow in aging pipes",
+            "Structural health monitoring (SHM) concepts",
+            "Knowledge of corrosion protection (Cathodic protection)",
+            "Risk-based maintenance scheduling",
+            "Sustainable urban drainage systems (SuDS)",
+            "Traffic volume and load rating analysis",
+            "Environmental Impact Assessment (EIA) basics"
+          ]
+        }
+      },
+      {
+        "Industrial Engineering": {
+          "Lean Six Sigma Green Belt Applications": [
+            "Standard deviation and variance calculations",
+            "Normal distribution and Z-scores",
+            "Basic Hypothesis testing (p-values)",
+            "Cause-and-Effect (Ishikawa) diagramming",
+            "Process mapping and flowcharts",
+            "Data collection plan development",
+            "Root cause analysis techniques",
+            "Excel Pivot Tables",
+            "Basic Histogram and Pareto chart construction",
+            "Understanding of 'Waste' (Muda) in workflows"
+          ],
+          "Supply Chain Analytics and Logistics Optimization": [
+            "Linear programming concepts",
+            "Inventory turnover ratios",
+            "Economic Order Quantity (EOQ) model",
+            "Transportation problem modeling",
+            "Network flow basics",
+            "Time series forecasting (Moving Average)",
+            "VLOOKUP and Index/Match functions",
+            "Lead time variability analysis",
+            "Basic SQL queries for data extraction",
+            "Geographic coordinate basics",
+            "Safety stock calculation"
+          ],
+          "Facility Layout Design using FlexSim or Arena": [
+            "Discrete event simulation logic",
+            "System bottlenecks and throughput concepts",
+            "Material handling equipment types",
+            "Queueing theory basics (M/M/1)",
+            "CAD software navigation (2D/3D)",
+            "Random variable generation",
+            "Probability distribution fitting",
+            "Workstation cycle time analysis",
+            "Spatial constraints and footprint planning",
+            "Flow of materials (From-To charts)"
+          ]
+        }
+      },
+      {
+        "Architecture": {
+          "Parametric Design and Computational Modeling (Grasshopper)": [
+            "Rhino 3D NURBS modeling fundamentals",
+            "Vector mathematics and coordinate systems",
+            "List management and data trees",
+            "Geometric transformations (Rotate, Scale, Mirror)",
+            "Boolean logic and conditional statements",
+            "Trigonometric functions for form generation",
+            "Surface subdivision techniques",
+            "Algorithmic thinking and flowcharts",
+            "Point-based geometry construction",
+            "Parametric constraints and variables",
+            "Mapping and remapping data domains"
+          ],
+          "Sustainable Building Certification (LEED/EDGE) Documentation": [
+            "Building envelope thermal performance (U-values)",
+            "ASHRAE 90.1 energy standard basics",
+            "Solar orientation and sun path analysis",
+            "Water efficiency calculations (baseline vs design)",
+            "Material lifecycle assessment (LCA) concepts",
+            "Indoor Environmental Quality (IEQ) requirements",
+            "Site ecology and heat island effect",
+            "Renewable energy integration types",
+            "Building codes and zoning regulations",
+            "Waste management plan structures",
+            "Project credit weightings and scoring"
+          ],
+          "Virtual Reality (VR) Walkthroughs and Unreal Engine Rendering": [
+            "Polygon mesh optimization and retopology",
+            "UV mapping and texture unwrapping",
+            "PBR (Physically Based Rendering) material workflow",
+            "Artificial and natural lighting principles",
+            "3D camera properties (Focal length, FOV)",
+            "FBX and Datasmith export/import workflows",
+            "Spatial audio basics",
+            "Keyframe animation and sequencing",
+            "Post-processing effects (Bloom, Depth of Field)",
+            "Basic blueprint visual scripting",
+            "Hardware requirements for VR headsets"
+          ]
+        }
+      },
+      {
+        "Interior Design": {
+          "Sourcing and Sustainable Material Specification": [
+            "Life Cycle Assessment (LCA) basics",
+            "VOC emission standards",
+            "FSC and Cradle to Cradle certification knowledge",
+            "Material Safety Data Sheets (MSDS) interpretation",
+            "Textile durability testing (Martindale/Wyzenbeek)",
+            "FF&E (Furniture, Fixtures, and Equipment) scheduling",
+            "Budgeting and unit cost estimation",
+            "Vendor and manufacturer lead time management",
+            "Slip resistance ratings (DCOF)",
+            "Fabric content and weave characteristics",
+            "Sustainable harvesting practices"
+          ],
+          "Kitchen and Bath Specialized Technical Drafting": [
+            "NKBA (National Kitchen & Bath Association) planning standards",
+            "Plumbing rough-in requirements",
+            "Cabinetry construction types (Framed vs. Frameless)",
+            "Standard appliance dimensions and clearances",
+            "Orthographic projection (Plans, Elevations, Sections)",
+            "Detailed dimensioning and annotation",
+            "Waterproofing and substrate systems",
+            "ADA accessibility guidelines for wet areas",
+            "Electrical outlet placement (GFCI requirements)",
+            "Reading architectural scales",
+            "Joinery and millwork detailing"
+          ],
+          "Smart Home Technology Integration and Lighting Design": [
+            "Circuits and load calculations",
+            "Color Temperature (Kelvin) and CRI",
+            "Lumen to Watt conversions",
+            "Types of light distribution (Ambient, Task, Accent)",
+            "IoT communication protocols (Zigbee, Z-Wave, Matter)",
+            "Reflected Ceiling Plan (RCP) symbols",
+            "Dimming compatibility (ELV, MLV, 0-10V)",
+            "Smart hub and gateway architecture",
+            "Switch and sensor placement logic",
+            "Basic networking and Wi-Fi dead zone analysis",
+            "Layering light techniques"
+          ]
+        }
+      },
+      {
+        "Graphic Design": {
+          "UX/UI Design and Prototyping (Figma/Adobe XD)": [
+            "User persona development",
+            "Wireframing low-fidelity layouts",
+            "Information architecture and sitemaps",
+            "Grid systems and responsive breakpoints",
+            "Visual hierarchy and typography scales",
+            "Color theory and accessibility (WCAG) contrast",
+            "Common UI patterns (Navbars, Modals, Cards)",
+            "Interactive states (Hover, Active, Disabled)",
+            "Iconography and SVG optimization",
+            "Auto-layout and component constraints",
+            "User flow mapping"
+          ],
+          "Motion Graphics and 2D Animation (After Effects)": [
+            "Keyframe interpolation (Linear vs. Bezier)",
+            "The 12 Principles of Animation (Squash/Stretch, Anticipation)",
+            "Timeline and layer management",
+            "Vector asset preparation in Adobe Illustrator",
+            "Basic easing functions (Easy Ease)",
+            "Parenting and null objects",
+            "Masking and track mattes",
+            "Frame rates and aspect ratios",
+            "Motion blur application",
+            "Audio synchronization basics",
+            "Rendering and codec selection (H.264, ProRes)"
+          ],
+          "AI-Assisted Content Creation and Prompt Engineering": [
+            "Descriptive adjectives and lighting terminology",
+            "Style referencing (Art movements, specific artists)",
+            "Aspect ratio parameters",
+            "Iterative refinement and seed manipulation",
+            "Basic understanding of Diffusion models",
+            "Image resolution and upscaling concepts",
+            "Negative prompting techniques",
+            "Ethical considerations and copyright basics",
+            "Inpainting and outpainting workflows",
+            "Content moderation and safety guidelines",
+            "Digital compositing in Photoshop"
+          ]
+        }
+      },
+      {
+        "Business Administration": {
+          "Agile Project Management (Scrum/Kanban)": [
+            "Defining SMART goals",
+            "Work Breakdown Structure (WBS) creation",
+            "Gantt chart interpretation",
+            "Team role identification (Leader vs. Facilitator)",
+            "Basic understanding of SDLC (Software Development Life Cycle)",
+            "Meeting facilitation and minute-taking",
+            "Critical Path Method (CPM) basics",
+            "Task prioritization techniques (MoSCoW method)",
+            "Stakeholder mapping",
+            "Project budgeting and resource allocation",
+            "Conflict resolution strategies"
+          ],
+          "Customer Relationship Management (CRM) Administration": [
+            "Sales funnel and pipeline stages",
+            "Lead generation vs. Lead qualification",
+            "Data entry and record hygiene",
+            "Basic database structure (Objects, Fields, Records)",
+            "Automated email marketing basics",
+            "Customer segmentation criteria",
+            "KPI tracking (Conversion rates, Churn)",
+            "B2B vs. B2C sales cycles",
+            "Basic workflow logic (If/Then statements)",
+            "Data privacy basics (GDPR/CCPA)",
+            "Report generation and dashboard visualization"
+          ],
+          "Change Management for Digital Transformation": [
+            "Organizational culture assessment",
+            "SWOT analysis (Strengths, Weaknesses, Opportunities, Threats)",
+            "Internal communication planning",
+            "Impact analysis for process changes",
+            "Resistance to change psychology",
+            "Cloud computing vs. On-premise concepts",
+            "Training needs analysis",
+            "Executive sponsorship roles",
+            "Business process modeling (As-Is vs. To-Be)",
+            "Post-implementation review (PIR) methods",
+            "Success metric definition (ROI/adoption rates)"
+          ]
+        }
+      },
+      {
+        "Business Information Systems": {
+          "ERP System Implementation (SAP or Oracle Fundamentals)": [
+            "Core accounting principles (General Ledger, AP/AR)",
+            "Organizational hierarchy structures",
+            "Procure-to-Pay process flow",
+            "Order-to-Cash process flow",
+            "Relational database management concepts",
+            "User Acceptance Testing (UAT) basics",
+            "Functional requirements gathering",
+            "Legacy system data extraction",
+            "End-user training documentation",
+            "Module-based software architecture",
+            "System integration testing (SIT)"
+          ],
+          "Business Process Modeling and Notation (BPMN)": [
+            "Logic gate fundamentals (AND, OR, XOR)",
+            "Sequence flow vs. Message flow",
+            "Standard flowchart symbols",
+            "Business requirement documentation",
+            "Identifying process actors and roles",
+            "Activity decomposition (Sub-processes)",
+            "Exception handling logic",
+            "As-Is process mapping",
+            "Time and cost estimation per task",
+            "Visual syntax consistency",
+            "Swimlane diagramming"
+          ],
+          "Data Governance and Master Data Management": [
+            "Data quality dimensions (Accuracy, Completeness)",
+            "Metadata management basics",
+            "Data dictionary creation",
+            "Primary key and Foreign key relationships",
+            "Data lifecycle stages",
+            "Understanding of 'Single Source of Truth'",
+            "Data stewardship roles",
+            "Regulatory compliance basics (SOX/HIPAA)",
+            "Data profiling techniques",
+            "ETL (Extract, Transform, Load) concepts",
+            "Naming convention standardization"
+          ]
+        }
+      },
+      {
+        "Accounting": {
+          "Tax Compliance and Jordan Income & Sales Tax Law": [
+            "Principles of Financial Accounting (IFRS)",
+            "General Ledger maintenance",
+            "Calculating Gross vs. Net Income",
+            "Deductible vs. Non-deductible expenses",
+            "Double-entry bookkeeping systems",
+            "Withholding tax basics",
+            "Preparation of Trial Balances",
+            "Financial statement analysis",
+            "Basic understanding of Jordan's Social Security deductions",
+            "Distinction between Taxable and Exempt supplies",
+            "Documentation and record-keeping requirements"
+          ],
+          "Cloud Accounting Software (Xero/QuickBooks/Zoho)": [
+            "Bank reconciliation procedures",
+            "Chart of Accounts (COA) setup",
+            "Accounts Payable and Receivable aging",
+            "Generating Invoices and Credit Notes",
+            "Understanding SaaS (Software as a Service) models",
+            "Basic browser security and MFA (Multi-Factor Authentication)",
+            "Digital file management and cloud storage",
+            "Importing CSV and Excel data",
+            "Fixed asset depreciation schedules",
+            "Cash flow statement basics",
+            "User role permissions and access control"
+          ],
+          "Audit Automation and Forensic Accounting Tools": [
+            "Internal control frameworks (COSO)",
+            "Standard Auditing Practices (ISA)",
+            "Fraud triangle theory",
+            "Sampling methods and statistical significance",
+            "Data validation and cleaning in Excel",
+            "Identifying anomalous transactions",
+            "Benford's Law fundamentals",
+            "Professional skepticism and ethics",
+            "Evidence gathering and chain of custody",
+            "Basic boolean search logic",
+            "Comparing budget vs. actual variances"
+          ]
+        }
+      },
+      {
+        "Finance and Banking": {
+          "Financial Modeling and Valuation (Advanced Excel)": [
+            "Time Value of Money (TVM) principles",
+            "Discounted Cash Flow (DCF) theory",
+            "WACC (Weighted Average Cost of Capital) components",
+            "Excel keyboard shortcuts for navigation",
+            "Sensitivity analysis (Data Tables)",
+            "Financial statement linkage (IS, BS, CFS)",
+            "Capital budgeting techniques (NPV, IRR)",
+            "Scenario Manager and Goal Seek",
+            "Logical functions (IF, AND, OR, IFERROR)",
+            "Conditional formatting for financial reports",
+            "Basic understanding of Beta and CAPM"
+          ],
+          "FinTech Product Management and Digital Wallets": [
+            "Mobile payment gateway basics",
+            "API fundamentals (Request/Response)",
+            "Contactless technology (NFC and QR codes)",
+            "User acquisition cost (CAC) metrics",
+            "Peer-to-Peer (P2P) lending concepts",
+            "Open Banking and PSD2 basics",
+            "Blockchain and Distributed Ledger basics",
+            "UI/UX principles for mobile apps",
+            "Agile product backlog management",
+            "Customer journey mapping",
+            "Transaction processing flow"
+          ],
+          "Anti-Money Laundering (AML) and KYC Regulations": [
+            "Three stages of money laundering (Placement, Layering, Integration)",
+            "Customer Due Diligence (CDD) levels",
+            "Politically Exposed Persons (PEPs) identification",
+            "Suspicious Activity Report (SAR) basics",
+            "OFAC and international sanction lists",
+            "Terrorist financing red flags",
+            "Bank Secrecy Act (BSA) fundamentals",
+            "Risk-based approach (RBA) methodology",
+            "Transaction monitoring logic",
+            "Beneficial ownership identification",
+            "Records retention policies"
+          ]
+        }
+      },
+      {
+        "Risk Management": {
+          "ESG (Environmental, Social, and Governance) Reporting": [
+            "Basic Corporate Finance Principles",
+            "GRI (Global Reporting Initiative) Standards Overview",
+            "Materiality Assessment Concepts",
+            "Carbon Footprint Calculation Basics",
+            "Stakeholder Theory",
+            "Data Collection via Microsoft Forms",
+            "Business Ethics Fundamentals",
+            "Supply Chain Mapping",
+            "Regulatory Compliance Basics",
+            "Corporate Social Responsibility (CSR) Frameworks",
+            "Tableau Data Visualization",
+            "Introductory Audit Procedures"
+          ],
+          "Business Continuity Planning (BCP) Coordination": [
+            "Business Impact Analysis (BIA) Basics",
+            "Emergency Response Protocols",
+            "Crisis Management Fundamentals",
+            "Project Management (Gantt Charts)",
+            "Organizational Mapping",
+            "Risk Identification Techniques",
+            "IT Disaster Recovery Concepts",
+            "Communication Plan Drafting",
+            "Resource Allocation Strategy",
+            "Facility Management Basics",
+            "Gap Analysis Methodology",
+            "Testing and Exercise Design"
+          ],
+          "Operational Risk Analytics and Dashboards": [
+            "Key Risk Indicator (KRI) Definition",
+            "Microsoft Excel Pivot Tables",
+            "Probability and Statistical Modeling",
+            "Root Cause Analysis (RCA)",
+            "Power BI Dashboard Design",
+            "Database Querying (SQL)",
+            "Loss Event Database Management",
+            "Monte Carlo Simulation Basics",
+            "Process Flow Mapping (Visio)",
+            "Internal Control Frameworks (COSO)",
+            "Trend Analysis",
+            "Quantitative Risk Assessment"
+          ]
+        }
+      },
+      {
+        "Marketing": {
+          "Brand Storytelling and Content Strategy": [
+            "Narrative Arc Structure",
+            "Copywriting Fundamentals",
+            "Content Calendar Management",
+            "Social Media Analytics",
+            "Search Engine Optimization (SEO) Basics",
+            "Adobe Creative Cloud Overview",
+            "Target Audience Segmentation",
+            "Brand Voice Guidelines",
+            "Visual Hierarchy Principles",
+            "Content Distribution Channels",
+            "Blogging and CMS Basics (WordPress)",
+            "Digital Advertising Fundamentals"
+          ],
+          "Market Research Analysis using SPSS or Tableau": [
+            "Descriptive Statistics",
+            "Hypothesis Testing (P-values)",
+            "Survey Design and Methodology",
+            "Quantitative Data Cleaning",
+            "Correlation and Regression Analysis",
+            "Data Visualization Best Practices",
+            "Standard Deviation and Variance",
+            "Primary vs. Secondary Research",
+            "Sampling Techniques",
+            "Microsoft Excel Data Management",
+            "Qualitative Coding Basics",
+            "Statistical Significance"
+          ],
+          "Customer Journey Mapping and Experience Design": [
+            "User Persona Development",
+            "Touchpoint Identification",
+            "Empathy Mapping",
+            "Consumer Behavior Theory",
+            "UI/UX Design Principles",
+            "Pain Point Analysis",
+            "Service Blueprinting",
+            "Customer Lifecycle Stages",
+            "A/B Testing Basics",
+            "Omnichannel Strategy Concepts",
+            "Net Promoter Score (NPS) Metrics",
+            "Wireframing Tools (Figma or Sketch)"
+          ]
+        }
+      },
+      {
+        "Digital Marketing": {
+          "Performance Marketing and Growth Hacking": [
+            "Cost Per Click (CPC) Metrics",
+            "Conversion Rate Optimization (CRO)",
+            "A/B Testing Frameworks",
+            "Google Ads Campaign Structure",
+            "Social Media Ad Manager Basics",
+            "Return on Ad Spend (ROAS) Calculation",
+            "Funnel Analysis Concepts",
+            "Customer Acquisition Cost (CAC) Modeling",
+            "Landing Page Optimization",
+            "Pixel and Tag Implementation",
+            "Virality Coefficient Basics",
+            "Cohort Analysis"
+          ],
+          "Marketing Automation (HubSpot/Mailchimp Workflows)": [
+            "Lead Scoring Logic",
+            "Email Marketing Compliance (CAN-SPAM/GDPR)",
+            "CRM Data Entry and Hygiene",
+            "Drip Campaign Sequencing",
+            "If/Then Conditional Logic",
+            "List Segmentation Strategy",
+            "Personalization Tags",
+            "Trigger-Based Messaging",
+            "Lead Magnet Distribution",
+            "Form Design and Mapping",
+            "Autoresponder Setup",
+            "Email Deliverability Fundamentals"
+          ],
+          "Advanced SEO and Technical Site Auditing": [
+            "HTML/CSS Fundamental Structure",
+            "Google Search Console Basics",
+            "XML Sitemaps and Robots.txt",
+            "Keyword Research Tools (Semrush/Ahrefs)",
+            "Canonicalization Concepts",
+            "Schema Markup Overview",
+            "Core Web Vitals Metrics",
+            "Backlink Profile Analysis",
+            "HTTP Status Codes (301, 404, 500)",
+            "Site Crawling Concepts",
+            "Internal Linking Architecture",
+            "Domain Authority Principles"
+          ]
+        }
+      }
+
+
+
+]

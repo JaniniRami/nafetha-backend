@@ -1,0 +1,122 @@
+{
+    "Computer Science": [
+      "Full-Stack Debugging and Observability",
+      "AI API Integration (LLM Orchestration)",
+      "Cloud Native Development (Docker & GitHub Actions)"
+    ],
+    "Software Engineering": [
+      "Test-Driven Development (TDD) for Enterprise Apps",
+      "Microservices and System Architecture Design",
+      "SaaS Multi-tenancy Implementation"
+    ],
+    "Data Science and Artificial Intelligence": [
+      "Generative AI Fine-tuning and RAG Implementation",
+      "Data Storytelling and Power BI Visualization",
+      "MLOps and Model Deployment Pipelines"
+    ],
+    "Cybersecurity": [
+      "Security Operations Center (SOC) Triage and IR",
+      "Cloud Security Posture Management (CSPM)",
+      "DevSecOps and Automated Security Scanning"
+    ],
+    "Computer Engineering": [
+      "Embedded Systems with IoT Protocol Integration",
+      "Edge AI Deployment for Hardware",
+      "RTOS (Real-Time Operating Systems) Programming"
+    ],
+    "Network Engineering": [
+      "Software-Defined Networking (SDN) and SD-WAN",
+      "Network Automation with Python and Ansible",
+      "Hybrid Cloud Networking (VPN & Direct Connect)"
+    ],
+    "Information Technology": [
+      "IT Governance and Compliance (ISO 27001 Basics)",
+      "Enterprise Resource Planning (ERP) Configuration",
+      "Digital Transformation Project Management"
+    ],
+    "Mechatronics Engineering": [
+        "PLC and SCADA Programming for Industrial Automation",
+        "Robotic Process Automation (RPA) and Cobot Integration",
+        "Digital Twin Modeling and Simulation"
+    ],
+    "Renewable Energy Engineering": [
+        "Solar PV System Design with PVSyst and Helioscope",
+        "Energy Auditing and Management (ISO 50001 Basics)",
+        "Battery Energy Storage Systems (BESS) Integration"
+    ],
+    "Electrical Engineering": [
+        "Low Voltage (LV) Electrical Design for Smart Buildings",
+        "Power System Analysis using ETAP or DIgSILENT",
+        "Electric Vehicle (EV) Charging Infrastructure Design"
+    ],
+    "Mechanical Engineering": [
+        "HVAC Design with BIM (Revit) and HAP Software",
+        "Additive Manufacturing (3D Printing) for Prototyping",
+        "Predictive Maintenance and Vibration Analysis"
+    ],
+    "Civil Engineering": [
+        "BIM (Building Information Modeling) Coordination and Revit",
+        "Quantity Surveying with CostX or Candy Software",
+        "Infrastructure Asset Management and Rehabilitation"
+    ],
+    "Chemical Engineering": [
+        "Process Safety Management (PSM) and HAZOP Analysis",
+        "Wastewater Treatment and Desalination Plant Operations",
+        "Green Hydrogen and Carbon Capture Technologies"
+    ],
+    "Industrial Engineering": [
+        "Lean Six Sigma Green Belt Applications",
+        "Supply Chain Analytics and Logistics Optimization",
+        "Facility Layout Design using FlexSim or Arena"
+    ],
+    "Architecture": [
+        "Parametric Design and Computational Modeling (Grasshopper)",
+        "Sustainable Building Certification (LEED/EDGE) Documentation",
+        "Virtual Reality (VR) Walkthroughs and Unreal Engine Rendering"
+    ],
+    "Interior Design": [
+        "Sourcing and Sustainable Material Specification",
+        "Kitchen and Bath Specialized Technical Drafting",
+        "Smart Home Technology Integration and Lighting Design"
+    ],
+    "Graphic Design": [
+        "UX/UI Design and Prototyping (Figma/Adobe XD)",
+        "Motion Graphics and 2D Animation (After Effects)",
+        "AI-Assisted Content Creation and Prompt Engineering"
+    ],
+    "Business Administration": [
+        "Agile Project Management (Scrum/Kanban)",
+        "Customer Relationship Management (CRM) Administration",
+        "Change Management for Digital Transformation"
+    ],
+    "Business Information Systems": [
+        "ERP System Implementation (SAP or Oracle Fundamentals)",
+        "Business Process Modeling and Notation (BPMN)",
+        "Data Governance and Master Data Management"
+    ],
+    "Accounting": [
+        "Tax Compliance and Jordan Income & Sales Tax Law",
+        "Cloud Accounting Software (Xero/QuickBooks/Zoho)",
+        "Audit Automation and Forensic Accounting Tools"
+    ],
+    "Finance and Banking": [
+        "Financial Modeling and Valuation (Advanced Excel)",
+        "FinTech Product Management and Digital Wallets",
+        "Anti-Money Laundering (AML) and KYC Regulations"
+    ],
+    "Risk Management": [
+        "ESG (Environmental, Social, and Governance) Reporting",
+        "Business Continuity Planning (BCP) Coordination",
+        "Operational Risk Analytics and Dashboards"
+    ],
+    "Marketing": [
+        "Brand Storytelling and Content Strategy",
+        "Market Research Analysis using SPSS or Tableau",
+        "Customer Journey Mapping and Experience Design"
+    ],
+    "Digital Marketing": [
+        "Performance Marketing and Growth Hacking",
+        "Marketing Automation (HubSpot/Mailchimp Workflows)",
+        "Advanced SEO and Technical Site Auditing"
+    ]
+  }

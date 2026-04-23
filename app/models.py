@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID as PyUUID
 from uuid import uuid4
@@ -59,6 +59,11 @@ class User(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    roadmaps: Mapped[list["UserRoadmap"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class UserProfile(Base):
@@ -115,6 +120,14 @@ class UserProfile(Base):
         back_populates="profile",
         cascade="all, delete-orphan",
     )
+    prerequisite_rows: Mapped[list["ProfilePrerequisite"]] = relationship(
+        back_populates="profile",
+        cascade="all, delete-orphan",
+    )
+    roadmaps: Mapped[list["UserRoadmap"]] = relationship(
+        back_populates="profile",
+        cascade="all, delete-orphan",
+    )
 
 
 class ProfileInterest(Base):
@@ -139,6 +152,106 @@ class ProfileInterest(Base):
     interest: Mapped[str] = mapped_column(String(128), nullable=False)
 
     profile: Mapped["UserProfile"] = relationship(back_populates="interest_rows")
+
+
+class ProfilePrerequisite(Base):
+    """One row per prerequisite selected by a user (stored as provided)."""
+
+    __tablename__ = "profile_prerequisites"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_profile_id",
+            "skill",
+            "prerequisite",
+            name="uq_profile_prerequisites_profile_prerequisite",
+        ),
+    )
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_profile_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("user_profiles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    skill: Mapped[str] = mapped_column(String(255), nullable=False)
+    prerequisite: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    profile: Mapped["UserProfile"] = relationship(back_populates="prerequisite_rows")
+
+
+class UserRoadmap(Base):
+    __tablename__ = "user_roadmaps"
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_profile_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("user_profiles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    goal_skill: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    user: Mapped["User"] = relationship(back_populates="roadmaps")
+    profile: Mapped["UserProfile"] = relationship(back_populates="roadmaps")
+    steps: Mapped[list["UserRoadmapStep"]] = relationship(
+        back_populates="roadmap",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class UserRoadmapStep(Base):
+    __tablename__ = "user_roadmap_steps"
+    __table_args__ = (
+        UniqueConstraint(
+            "roadmap_id",
+            "step_order",
+            name="uq_user_roadmap_steps_roadmap_order",
+        ),
+    )
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    roadmap_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("user_roadmaps.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    step_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    main: Mapped[str] = mapped_column(String(255), nullable=False)
+    technical_complement: Mapped[str] = mapped_column(String(255), nullable=False)
+    tool_or_soft_skill: Mapped[str] = mapped_column(String(255), nullable=False)
+    completed: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        default=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    roadmap: Mapped["UserRoadmap"] = relationship(back_populates="steps")
 
 
 class ScrapedJob(Base):
