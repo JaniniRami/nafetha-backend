@@ -81,10 +81,6 @@ export default function Jobs() {
     setEditForm(emptyForm);
   }
 
-  function hasJobDescriptionForAi(j: Job): boolean {
-    return !!(j.job_description ?? "").trim();
-  }
-
   function hasJobDisplayedKeywords(j: Job): boolean {
     const k = (j.displayed_keywords ?? "").trim();
     return !!k;
