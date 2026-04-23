@@ -14,6 +14,7 @@ const emptyEventForm = {
   location: "",
   description: "",
   website: "",
+  keywords: "",
 };
 
 function optionalWebsite(s: string): string | null {
@@ -239,6 +240,7 @@ export default function Communities() {
           location: eventForm.location.trim(),
           description: eventForm.description,
           website: optionalWebsite(eventForm.website),
+          keywords: eventForm.keywords.trim() ? eventForm.keywords.trim() : null,
         }),
       });
       setSuccess("Event created.");
@@ -259,6 +261,7 @@ export default function Communities() {
       location: ev.location,
       description: ev.description,
       website: ev.website ?? "",
+      keywords: ev.keywords ?? "",
     });
   }
 
@@ -287,6 +290,7 @@ export default function Communities() {
             location: editEventForm.location.trim(),
             description: editEventForm.description,
             website: optionalWebsite(editEventForm.website),
+            keywords: editEventForm.keywords.trim() ? editEventForm.keywords.trim() : null,
           }),
         },
       );
@@ -557,6 +561,13 @@ export default function Communities() {
             onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))}
             rows={3}
           />
+          <label htmlFor="ev_keywords">Keywords (optional, comma-separated)</label>
+          <input
+            id="ev_keywords"
+            value={eventForm.keywords}
+            onChange={(e) => setEventForm((f) => ({ ...f, keywords: e.target.value }))}
+            placeholder="topic-one,topic-two"
+          />
           <button type="submit" disabled={communities.length === 0}>
             Create event
           </button>
@@ -611,6 +622,12 @@ export default function Communities() {
               onChange={(e) => setEditEventForm((f) => ({ ...f, description: e.target.value }))}
               rows={3}
             />
+            <label htmlFor="ee_keywords">Keywords (optional, comma-separated)</label>
+            <input
+              id="ee_keywords"
+              value={editEventForm.keywords}
+              onChange={(e) => setEditEventForm((f) => ({ ...f, keywords: e.target.value }))}
+            />
             <div className="table-actions">
               <button type="submit">Save changes</button>
               <button type="button" className="secondary" onClick={cancelEditEvent}>
@@ -653,6 +670,7 @@ export default function Communities() {
                   <th>When</th>
                   <th>Location</th>
                   <th>Website</th>
+                  <th>Keywords</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -670,6 +688,13 @@ export default function Communities() {
                       ) : (
                         <span className="muted">—</span>
                       )}
+                    </td>
+                    <td
+                      className="muted"
+                      style={{ maxWidth: "12rem", overflow: "hidden", textOverflow: "ellipsis" }}
+                      title={ev.keywords ?? undefined}
+                    >
+                      {ev.keywords?.trim() ? ev.keywords : "—"}
                     </td>
                     <td>
                       <div className="table-actions">

@@ -4,8 +4,10 @@ import Login from "./pages/Login";
 import Companies from "./pages/Companies";
 import Communities from "./pages/Communities";
 import LinkedInScraper from "./pages/LinkedInScraper";
+import NahnoScraper from "./pages/NahnoScraper";
 import TanqeebScraper from "./pages/TanqeebScraper";
 import Jobs from "./pages/Jobs";
+import Volunteering from "./pages/Volunteering";
 import { apiFetch, type MeResponse } from "./api";
 
 function useSession() {
@@ -37,6 +39,12 @@ function Layout({ children }: { children: React.ReactNode }) {
             Jobs
           </NavLink>
           <NavLink
+            to="/volunteering"
+            className={({ isActive }) => `app-header__link${isActive ? " app-header__link--active" : ""}`}
+          >
+            Volunteering
+          </NavLink>
+          <NavLink
             to="/communities"
             className={({ isActive }) => `app-header__link${isActive ? " app-header__link--active" : ""}`}
           >
@@ -53,6 +61,12 @@ function Layout({ children }: { children: React.ReactNode }) {
             className={({ isActive }) => `app-header__link${isActive ? " app-header__link--active" : ""}`}
           >
             Tanqeeb scraper
+          </NavLink>
+          <NavLink
+            to="/nahno-scraper"
+            className={({ isActive }) => `app-header__link${isActive ? " app-header__link--active" : ""}`}
+          >
+            Nahno scraper
           </NavLink>
         </nav>
         <span className="spacer" />
@@ -142,6 +156,14 @@ export default function App() {
         }
       />
       <Route
+        path="/volunteering"
+        element={
+          <RequireAuth>
+            <Volunteering />
+          </RequireAuth>
+        }
+      />
+      <Route
         path="/communities"
         element={
           <RequireAuth>
@@ -162,6 +184,14 @@ export default function App() {
         element={
           <RequireAuth>
             <TanqeebScraper />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/nahno-scraper"
+        element={
+          <RequireAuth>
+            <NahnoScraper />
           </RequireAuth>
         }
       />

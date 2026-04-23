@@ -46,6 +46,10 @@ HEADLESS_MODE = os.getenv("HEADLESS_MODE", "").lower() in ("1", "true", "yes")
 # Optional: admin AI display-field generation (local Ollama). Set OLLAMA_HOST if not default.
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b").strip()
 
+# Semantic profile matching (SentenceTransformers + cosine similarity).
+PROFILE_MATCH_MODEL_NAME = os.getenv("PROFILE_MATCH_MODEL_NAME", "all-MiniLM-L6-v2").strip()
+PROFILE_MATCH_CACHE_PATH = os.getenv("PROFILE_MATCH_CACHE_PATH", "data/catalog_embeddings.npz").strip()
+
 # LinkedIn login strategy when no valid session exists.
 # true  = wait for the user to log in manually in the browser window.
 # false = use LINKEDIN_EMAIL / LINKEDIN_PASSWORD from .env (programmatic).

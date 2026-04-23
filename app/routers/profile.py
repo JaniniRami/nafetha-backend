@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import get_current_user
 from app.models import ProfileInterest, User, UserProfile
+from app.profile_matching import persist_catalog_match_scores_for_user
 from app.schemas import InterestsOut, InterestsReplaceIn, OnboardingIn, UserProfileOut
 
 router = APIRouter(tags=["profile"])
@@ -24,6 +25,18 @@ def _require_profile(db: Session, user: User) -> UserProfile:
             detail="Profile not found. Complete onboarding first.",
         )
     return profile
+
+
+def _best_effort_recompute_profile_match_scores(db: Session, user: User) -> None:
+    """Compute scores automatically after onboarding/interests changes; never block request on failures."""
+    try:
+        persist_catalog_match_scores_for_user(db, user)
+        print(f"[profile-match] trigger=profile_update success user_id={user.id}", flush=True)
+    except Exception as exc:
+        print(
+            f"[profile-match] trigger=profile_update failed user_id={user.id} error={exc}",
+            flush=True,
+        )
 
 
 @router.get(
@@ -119,6 +132,7 @@ def replace_interests(
     for label in payload.interests:
         db.add(ProfileInterest(user_profile_id=profile.id, interest=label))
     db.commit()
+    _best_effort_recompute_profile_match_scores(db, current_user)
 
     interests = sorted(payload.interests)
     return InterestsOut(interests=interests, has_interests=bool(interests))

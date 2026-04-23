@@ -85,10 +85,9 @@ export default function Jobs() {
     return !!(j.job_description ?? "").trim();
   }
 
-  function hasBothJobDisplayedFields(j: Job): boolean {
-    const d = (j.displayed_description ?? "").trim();
+  function hasJobDisplayedKeywords(j: Job): boolean {
     const k = (j.displayed_keywords ?? "").trim();
-    return !!(d && k);
+    return !!k;
   }
 
   async function enqueueJobDisplayAiJob(
@@ -399,15 +398,12 @@ export default function Jobs() {
                               disabled={
                                 !!aiJobRowIds[j.id] ||
                                 processingAllAiDisplay ||
-                                !hasJobDescriptionForAi(j) ||
-                                hasBothJobDisplayedFields(j)
+                                hasJobDisplayedKeywords(j)
                               }
                               title={
-                                !hasJobDescriptionForAi(j)
-                                  ? "Add job description first (AI uses job_description)"
-                                  : hasBothJobDisplayedFields(j)
-                                    ? "Displayed description and keywords are already set"
-                                    : "Generate displayed description & keywords from description (Gemini)"
+                                hasJobDisplayedKeywords(j)
+                                  ? "Displayed keywords are already set"
+                                  : "Generate displayed description & keywords from description (Gemini)"
                               }
                             >
                               {aiJobRowIds[j.id] ? "AI…" : "AI"}

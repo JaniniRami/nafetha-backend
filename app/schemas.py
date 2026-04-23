@@ -53,6 +53,8 @@ class AuthSession(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     user: TokenUserOut
+    profile: "UserProfileOut | None" = None
+    daily_highlights: "DailyHighlightsOut | None" = None
 
 
 class UserLogin(BaseModel):
@@ -200,6 +202,7 @@ class ScrapedJobOut(BaseModel):
     keyword: str | None
     displayed_description: str | None
     displayed_keywords: str | None
+    matching_percentage: float | None = None
     scraped_at: datetime
 
     @model_validator(mode="before")
@@ -225,6 +228,7 @@ class ScrapedJobOut(BaseModel):
                 "keyword": data.keyword,
                 "displayed_description": data.displayed_description,
                 "displayed_keywords": data.displayed_keywords,
+                "matching_percentage": getattr(data, "matching_percentage", None),
                 "scraped_at": data.scraped_at,
             }
         return data
@@ -246,7 +250,71 @@ class ScrapedCompanyOut(BaseModel):
     about_us: str | None
     displayed_description: str | None
     displayed_keywords: str | None
+    matching_percentage: float | None = None
     scraped_at: datetime
+
+
+class VolunteeringEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    event_url: str
+    title: str | None
+    subtitle: str | None
+    organizer: str | None
+    organizer_website: str | None
+    description: str | None
+    duration_dates: str | None
+    days: str | None
+    keywords: str | None
+    matching_percentage: float | None = None
+    scraped_at: datetime
+
+
+class VolunteeringEventUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    event_url: str | None = Field(default=None, min_length=1, max_length=1024)
+    title: str | None = Field(default=None, max_length=512)
+    subtitle: str | None = Field(default=None, max_length=512)
+    organizer: str | None = Field(default=None, max_length=512)
+    organizer_website: str | None = Field(default=None, max_length=1024)
+    description: str | None = None
+    duration_dates: str | None = Field(default=None, max_length=255)
+    days: str | None = Field(default=None, max_length=512)
+    keywords: str | None = Field(default=None, max_length=1024)
+
+    @field_validator(
+        "event_url",
+        "title",
+        "subtitle",
+        "organizer",
+        "organizer_website",
+        "duration_dates",
+        "days",
+        "keywords",
+        mode="before",
+    )
+    @classmethod
+    def strip_or_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else None
+        return v
+
+    @field_validator("keywords", mode="before")
+    @classmethod
+    def keywords_normalize(cls, v: object) -> object:
+        return normalize_displayed_keywords_input(v)
+
+
+class VolunteeringKeywordAIResponse(BaseModel):
+    success: bool
+    keyword: str = ""
+    saved: bool = False
+    event: VolunteeringEventOut | None = None
 
 
 class ScrapedCompanyCreate(BaseModel):
@@ -693,7 +761,48 @@ class CommunityEventOut(BaseModel):
     location: str
     description: str
     website: str | None
+    keywords: str | None
+    matching_percentage: float | None = None
     created_at: datetime
+
+
+class DailyHighlightUserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    email: str
+    full_name: str
+    role: str
+    onboarded: bool
+    created_at: datetime
+
+
+class DailyHighlightsOut(BaseModel):
+    user: DailyHighlightUserOut | None = None
+    job: ScrapedJobOut | None = None
+    volunteering_event: VolunteeringEventOut | None = None
+    community_event: CommunityEventOut | None = None
+
+
+class CatalogMatchScoreItem(BaseModel):
+    id: UUID
+    score_percent: float
+
+
+class CatalogMatchScoresOut(BaseModel):
+    model_name: str
+    profile_text: str
+    jobs: list[CatalogMatchScoreItem]
+    companies: list[CatalogMatchScoreItem]
+    communities: list[CatalogMatchScoreItem]
+    community_events: list[CatalogMatchScoreItem]
+    volunteering_events: list[CatalogMatchScoreItem]
+
+
+class CatalogItemMatchScoreOut(BaseModel):
+    id: UUID
+    catalog_type: str
+    matching_percentage: float
 
 
 class CommunityWithEventsOut(CommunityOut):
@@ -715,6 +824,7 @@ class CommunityEventCreate(BaseModel):
     location: str = Field(min_length=1, max_length=1024)
     description: str = Field(default="", max_length=50_000)
     website: str | None = Field(default=None, max_length=1024)
+    keywords: str | None = Field(default=None, max_length=1024)
 
     @field_validator("name", "location", mode="before")
     @classmethod
@@ -732,6 +842,11 @@ class CommunityEventCreate(BaseModel):
             s = v.strip()
             return s if s else None
         return v
+
+    @field_validator("keywords", mode="before")
+    @classmethod
+    def create_keywords_normalize(cls, v: object) -> object:
+        return normalize_displayed_keywords_input(v)
 
 
 class CommunityEventUpdate(BaseModel):
@@ -742,6 +857,7 @@ class CommunityEventUpdate(BaseModel):
     location: str | None = Field(default=None, min_length=1, max_length=1024)
     description: str | None = Field(default=None, max_length=50_000)
     website: str | None = Field(default=None, max_length=1024)
+    keywords: str | None = Field(default=None, max_length=1024)
 
     @field_validator("name", "location", mode="before")
     @classmethod
@@ -761,6 +877,18 @@ class CommunityEventUpdate(BaseModel):
             s = v.strip()
             return s if s else None
         return v
+
+    @field_validator("keywords", mode="before")
+    @classmethod
+    def update_keywords_normalize(cls, v: object) -> object:
+        return normalize_displayed_keywords_input(v)
+
+
+class CommunityEventKeywordsRegenerateResponse(BaseModel):
+    processed: int
+    updated: int
+    skipped: int
+    failed: int
 
 
 class SubscriptionStateOut(BaseModel):

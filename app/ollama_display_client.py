@@ -17,7 +17,13 @@ _DISPLAY_FIELDS_SCHEMA: dict[str, Any] = {
 }
 
 
-def ollama_display_chat_raw(*, system: str, user: str, model: str) -> str:
+def ollama_display_chat_raw(
+    *,
+    system: str,
+    user: str,
+    model: str,
+    response_schema: dict[str, Any] | None = None,
+) -> str:
     """
     Run ``ollama.chat`` with JSON-schema output. Returns assistant message text (JSON string).
 
@@ -29,6 +35,8 @@ def ollama_display_chat_raw(*, system: str, user: str, model: str) -> str:
         msg = "ollama package is not installed (pip install ollama)"
         raise RuntimeError(msg) from exc
 
+    schema = response_schema or _DISPLAY_FIELDS_SCHEMA
+
     try:
         response = chat(
             model=model,
@@ -36,7 +44,7 @@ def ollama_display_chat_raw(*, system: str, user: str, model: str) -> str:
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            format=_DISPLAY_FIELDS_SCHEMA,
+            format=schema,
             options={"temperature": 0.2, "num_predict": 512},
         )
     except Exception as exc:

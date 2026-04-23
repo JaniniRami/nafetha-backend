@@ -13,3 +13,5 @@ PyJWT>=2.8.0
 openpyxl>=3.1.0
 itsdangerous>=2.2.0
 ollama>=0.4.0
+sentence-transformers>=3.0.0
+scikit-learn>=1.5.0

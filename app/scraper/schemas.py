@@ -176,3 +176,38 @@ class TanqeebImportUrlsRequest(BaseModel):
                 f"Invalid: {invalid}"
             )
         return cleaned
+
+
+class NahnoImportRequest(BaseModel):
+    """Run Nahno volunteer scraping and persist into ``volunteering_events``."""
+
+    max_pages: int | None = Field(
+        default=None,
+        ge=1,
+        le=500,
+        description="Maximum volunteer listing pages to traverse; null means keep loading until exhausted.",
+    )
+    delay_seconds: float = Field(
+        default=2.5,
+        ge=0.0,
+        le=30.0,
+        description="Base delay between listing/detail requests; jitter is added by the scraper.",
+    )
+    lang: str = Field(
+        default="ar",
+        description="Nahno language parameter (typically ar or en).",
+    )
+
+
+class NahnoImportResult(BaseModel):
+    event_url: str
+    status: Literal["saved", "skipped", "error"]
+    title: str | None = None
+    reason: str | None = None
+
+
+class NahnoImportResponse(BaseModel):
+    saved: int
+    skipped: int
+    errors: int
+    results: list[NahnoImportResult]

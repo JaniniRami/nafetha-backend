@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.company_display_ai import keywords_to_stored_string
+from app.community_event_keyword_ai import generate_keywords_from_event
 from app.community_display_ai import generate_display_fields_from_community
 from app.database import get_db
 from app.deps import get_current_user
@@ -22,6 +23,7 @@ from app.models import (
 from app.schemas import (
     CommunityCreate,
     CommunityEventCreate,
+    CommunityEventKeywordsRegenerateResponse,
     CommunityEventOut,
     CommunityEventUpdate,
     CommunityOut,
@@ -77,6 +79,78 @@ def list_communities_with_events(
         .order_by(Community.created_at.desc())
     )
     return list(db.scalars(stmt).all())
+
+
+@router.post(
+    "/events/keywords/regenerate-all",
+    response_model=CommunityEventKeywordsRegenerateResponse,
+)
+async def regenerate_all_event_keywords(
+    db: Session = Depends(get_db),
+) -> CommunityEventKeywordsRegenerateResponse:
+    """Unauthenticated bulk regeneration of community event keywords using AI."""
+    rows = list(db.scalars(select(CommunityEvent).order_by(CommunityEvent.created_at.desc())).all())
+    processed = 0
+    updated = 0
+    skipped = 0
+    failed = 0
+
+    for row in rows:
+        processed += 1
+        title = (row.name or "").strip()
+        description = (row.description or "").strip()
+        if not title and not description:
+            print(
+                f"[community-event-keywords] skip event_id={row.id} reason=empty_title_and_description",
+                flush=True,
+            )
+            skipped += 1
+            continue
+        try:
+            parsed = await asyncio.to_thread(generate_keywords_from_event, title, description)
+        except (RuntimeError, ValueError):
+            print(
+                f"[community-event-keywords] fail event_id={row.id} reason=ai_runtime_or_validation_error",
+                flush=True,
+            )
+            failed += 1
+            continue
+
+        if not parsed.get("success"):
+            print(
+                f"[community-event-keywords] fail event_id={row.id} reason=ai_returned_success_false",
+                flush=True,
+            )
+            failed += 1
+            continue
+
+        keywords = list(parsed.get("keywords") or [])[:3]
+        if len(keywords) < 3:
+            print(
+                f"[community-event-keywords] fail event_id={row.id} reason=insufficient_keywords count={len(keywords)}",
+                flush=True,
+            )
+            failed += 1
+            continue
+
+        row.keywords = keywords_to_stored_string(keywords) or None
+        print(
+            f"[community-event-keywords] updated event_id={row.id} added_keywords_count={len(keywords)} keywords={row.keywords}",
+            flush=True,
+        )
+        updated += 1
+
+    db.commit()
+    print(
+        f"[community-event-keywords] summary processed={processed} updated={updated} skipped={skipped} failed={failed}",
+        flush=True,
+    )
+    return CommunityEventKeywordsRegenerateResponse(
+        processed=processed,
+        updated=updated,
+        skipped=skipped,
+        failed=failed,
+    )
 
 
 @router.post("", response_model=CommunityOut, status_code=status.HTTP_201_CREATED)
@@ -263,6 +337,7 @@ def create_community_event(
         location=payload.location,
         description=payload.description,
         website=payload.website,
+        keywords=payload.keywords,
     )
     db.add(row)
     db.commit()
@@ -308,6 +383,8 @@ def update_community_event(
         event.description = data["description"]
     if "website" in data:
         event.website = data["website"]
+    if "keywords" in data:
+        event.keywords = data["keywords"]
 
     db.commit()
     db.refresh(event)

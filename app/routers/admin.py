@@ -22,8 +22,9 @@ from app.config import HEADLESS_MODE, OLLAMA_MODEL
 from app.database import get_db
 from app.database import SessionLocal
 from app.deps import require_superadmin
-from app.models import ScrapedCompany, ScrapedJob, User
+from app.models import ScrapedCompany, ScrapedJob, User, VolunteeringEvent
 from app.scraper.services.auth import BrowserManager
+from app.volunteering_keyword_ai import classify_volunteering_keyword
 from app.schemas import (
     CompanyAboutBackfillRequest,
     CompanyAboutBackfillResponse,
@@ -44,6 +45,9 @@ from app.schemas import (
     ScrapedJobCreate,
     ScrapedJobOut,
     ScrapedJobUpdate,
+    VolunteeringKeywordAIResponse,
+    VolunteeringEventOut,
+    VolunteeringEventUpdate,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -827,6 +831,12 @@ def _assign_job_display_fields_from_ai_parse(row: ScrapedJob, parsed: dict[str, 
     row.displayed_keywords = keywords_str or None
 
 
+def _count_csv_keywords(value: str | None) -> int:
+    if not value:
+        return 0
+    return len([part for part in value.split(",") if part.strip()])
+
+
 @router.post("/jobs/{job_row_id}/ai-display", response_model=JobDisplayAIResponse)
 def admin_job_generate_ai_display_fields(
     job_row_id: UUID,
@@ -871,6 +881,12 @@ def admin_job_generate_ai_display_fields(
         )
 
     _assign_job_display_fields_from_ai_parse(row, parsed)
+    print(
+        "[job-ai-display] prepared "
+        f"id={row.id} add_keywords_count={_count_csv_keywords(row.displayed_keywords)} "
+        f"keywords={row.displayed_keywords or ''}",
+        flush=True,
+    )
     try:
         db.commit()
     except IntegrityError as exc:
@@ -917,12 +933,18 @@ async def _run_job_display_ai_job(batch_job_id: str) -> None:
     try:
         rows = _rows_for_job_display_ai_job(db, payload)
         job.processed = len(rows)
+        print(
+            f"[job-ai-display] batch_start id={batch_job_id} total_rows={len(rows)}",
+            flush=True,
+        )
         for row in rows:
             text = (row.job_description or "").strip()
             if not text:
+                print(f"[job-ai-display] skip id={row.id} reason=missing_job_description", flush=True)
                 skipped += 1
                 continue
             if job.only_missing_display and _has_any_job_display_field(row):
+                print(f"[job-ai-display] skip id={row.id} reason=already_has_display_fields", flush=True)
                 skipped += 1
                 continue
             try:
@@ -939,17 +961,27 @@ async def _run_job_display_ai_job(batch_job_id: str) -> None:
                 return
             except Exception:
                 db.rollback()
+                print(f"[job-ai-display] fail id={row.id} reason=ai_or_parse_error", flush=True)
                 failed += 1
                 continue
             if not parsed.get("success"):
+                print(f"[job-ai-display] decline id={row.id} reason=model_success_false", flush=True)
                 declined += 1
                 continue
             try:
                 _assign_job_display_fields_from_ai_parse(row, parsed)
+                print(
+                    "[job-ai-display] prepared "
+                    f"id={row.id} add_keywords_count={_count_csv_keywords(row.displayed_keywords)} "
+                    f"keywords={row.displayed_keywords or ''}",
+                    flush=True,
+                )
                 db.commit()
                 updated += 1
+                print(f"[job-ai-display] updated id={row.id}", flush=True)
             except IntegrityError:
                 db.rollback()
+                print(f"[job-ai-display] fail id={row.id} reason=db_integrity_error", flush=True)
                 failed += 1
         job.updated = updated
         job.skipped = skipped
@@ -957,6 +989,11 @@ async def _run_job_display_ai_job(batch_job_id: str) -> None:
         job.declined = declined
         job.status = "completed"
         job.completed_at = datetime.now(timezone.utc)
+        print(
+            "[job-ai-display] batch_summary "
+            f"id={batch_job_id} processed={len(rows)} updated={updated} skipped={skipped} failed={failed} declined={declined}",
+            flush=True,
+        )
     except Exception as exc:
         db.rollback()
         job.status = "failed"
@@ -966,12 +1003,7 @@ async def _run_job_display_ai_job(batch_job_id: str) -> None:
         db.close()
 
 
-@router.post("/jobs/ai-display/jobs", response_model=JobDisplayAIJobQueued)
-async def admin_enqueue_job_display_ai(
-    payload: JobDisplayAIJobRequest,
-    _: User = Depends(require_superadmin),
-) -> JobDisplayAIJobQueued:
-    """Background job: fill displayed fields from job_description."""
+def _enqueue_job_display_ai_job(payload: JobDisplayAIJobRequest) -> JobDisplayAIJobQueued:
     batch_job_id = str(uuid4())
     _job_display_ai_jobs[batch_job_id] = JobDisplayAIJobStatus(
         job_id=batch_job_id,
@@ -985,12 +1017,51 @@ async def admin_enqueue_job_display_ai(
     return JobDisplayAIJobQueued(job_id=batch_job_id, status="queued")
 
 
+@router.post("/jobs/ai-display/jobs", response_model=JobDisplayAIJobQueued)
+async def admin_enqueue_job_display_ai(
+    payload: JobDisplayAIJobRequest,
+    _: User = Depends(require_superadmin),
+) -> JobDisplayAIJobQueued:
+    """Background job: fill displayed fields from job_description."""
+    return _enqueue_job_display_ai_job(payload)
+
+
+@router.post("/public/jobs/ai-display/regenerate-all", response_model=JobDisplayAIJobQueued)
+async def public_regenerate_all_jobs_ai_display() -> JobDisplayAIJobQueued:
+    """Unauthenticated: enqueue AI keyword/description regeneration for all jobs."""
+    payload = JobDisplayAIJobRequest(
+        job_ids=[],
+        only_missing_display=False,
+        limit=None,
+    )
+    return _enqueue_job_display_ai_job(payload)
+
+
 @router.get("/jobs/ai-display/jobs/{job_id}", response_model=JobDisplayAIJobStatus)
 async def admin_get_job_display_ai_job(
     job_id: str,
     wait: bool = False,
     _: User = Depends(require_superadmin),
 ) -> JobDisplayAIJobStatus:
+    job = _job_display_ai_jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AI display job not found")
+    if not wait:
+        return job
+    deadline = time.monotonic() + _JOB_STATUS_WAIT_MAX_SEC
+    while job.status not in ("completed", "failed"):
+        if time.monotonic() >= deadline:
+            return job
+        await asyncio.sleep(_JOB_STATUS_WAIT_INTERVAL_SEC)
+    return job
+
+
+@router.get("/public/jobs/ai-display/jobs/{job_id}", response_model=JobDisplayAIJobStatus)
+async def public_get_job_display_ai_job(
+    job_id: str,
+    wait: bool = False,
+) -> JobDisplayAIJobStatus:
+    """Unauthenticated: read status for a public job-display AI batch."""
     job = _job_display_ai_jobs.get(job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AI display job not found")
@@ -1138,5 +1209,151 @@ def admin_delete_job(
     row = db.get(ScrapedJob, job_row_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    db.delete(row)
+    db.commit()
+
+
+@router.get("/volunteering-events", response_model=list[VolunteeringEventOut])
+def admin_list_volunteering_events(
+    _: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> list[VolunteeringEvent]:
+    stmt = select(VolunteeringEvent).order_by(VolunteeringEvent.scraped_at.desc())
+    return list(db.scalars(stmt).all())
+
+
+@router.patch("/volunteering-events/{event_id}", response_model=VolunteeringEventOut)
+def admin_update_volunteering_event(
+    event_id: UUID,
+    payload: VolunteeringEventUpdate,
+    _: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> VolunteeringEvent:
+    row = db.get(VolunteeringEvent, event_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Volunteering event not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
+
+    if "event_url" in data:
+        url = data["event_url"]
+        if url is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="event_url cannot be empty")
+        if db.scalar(
+            select(VolunteeringEvent.id).where(VolunteeringEvent.event_url == url, VolunteeringEvent.id != event_id).limit(1)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Another volunteering event already uses this URL.",
+            )
+        row.event_url = url
+    if "title" in data:
+        row.title = data["title"]
+    if "subtitle" in data:
+        row.subtitle = data["subtitle"]
+    if "organizer" in data:
+        row.organizer = data["organizer"]
+    if "organizer_website" in data:
+        row.organizer_website = data["organizer_website"]
+    if "description" in data:
+        row.description = data["description"]
+    if "duration_dates" in data:
+        row.duration_dates = data["duration_dates"]
+    if "days" in data:
+        row.days = data["days"]
+    if "keywords" in data:
+        row.keywords = data["keywords"]
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Volunteering event URL already exists",
+        ) from None
+    db.refresh(row)
+    return row
+
+
+@router.post("/volunteering-events/{event_id}/ai-keyword", response_model=VolunteeringKeywordAIResponse)
+def admin_generate_volunteering_event_ai_keyword(
+    event_id: UUID,
+    _: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> VolunteeringKeywordAIResponse:
+    if not OLLAMA_MODEL:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="OLLAMA_MODEL is not configured.",
+        )
+
+    row = db.get(VolunteeringEvent, event_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Volunteering event not found")
+
+    event_text = "\n".join(
+        [
+            f"title: {(row.title or '').strip()}",
+            f"subtitle: {(row.subtitle or '').strip()}",
+            f"organizer: {(row.organizer or '').strip()}",
+            f"description: {(row.description or '').strip()}",
+            f"duration_dates: {(row.duration_dates or '').strip()}",
+            f"days: {(row.days or '').strip()}",
+        ]
+    ).strip()
+    if not event_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Volunteering event has no text to analyze.",
+        )
+
+    try:
+        parsed = classify_volunteering_keyword(event_text)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Model response could not be parsed: {exc}",
+        ) from exc
+
+    if not parsed["success"]:
+        return VolunteeringKeywordAIResponse(
+            success=False,
+            keyword="",
+            saved=False,
+            event=None,
+        )
+
+    row.keywords = parsed["keyword"] or None
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Could not save event keyword: {exc}",
+        ) from None
+    db.refresh(row)
+    return VolunteeringKeywordAIResponse(
+        success=True,
+        keyword=parsed["keyword"],
+        saved=True,
+        event=VolunteeringEventOut.model_validate(row),
+    )
+
+
+@router.delete("/volunteering-events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_volunteering_event(
+    event_id: UUID,
+    _: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> None:
+    row = db.get(VolunteeringEvent, event_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Volunteering event not found")
     db.delete(row)
     db.commit()

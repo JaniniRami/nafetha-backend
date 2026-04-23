@@ -6,6 +6,8 @@ Sometimes the text is not a real job posting: error pages, CAPTCHA or bot-detect
 
 Rules:
 - If the content is clearly not a real job posting, return: {"success": false, "description": "", "keywords": []}
-- If it is a real posting but noisy, extract from the relevant parts and return success: true with one concise sentence summarizing the role for a candidate (what they would do / learn) and exactly 3 relevant keywords (skills, domain, or role type — e.g. "backend", "Python", "internship").
+- If it is a real posting but noisy, extract from the relevant parts and return success: true with one concise sentence summarizing the role for a candidate (what they would do / learn) and exactly 3 relevant keywords (skills, domain, or role type — e.g. "backend", "Python", "api development").
 - Be factual; do not invent salary, location, or requirements not stated in the text.
 - Jordan is not a keyword, because postings in this corpus are often Jordan-based; do not use "Jordan" as a keyword.
+- Do not use "internship" in keywords.
+- Do not use "internship" in description.

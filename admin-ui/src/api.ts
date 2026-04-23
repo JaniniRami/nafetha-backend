@@ -188,6 +188,7 @@ export type CommunityEvent = {
   location: string;
   description: string;
   website: string | null;
+  keywords: string | null;
   created_at: string;
 };
 
@@ -253,4 +254,39 @@ export type ImportUrlsResponse = {
   skipped: number;
   errors: number;
   results: ImportUrlResultRow[];
+};
+
+export type VolunteeringEvent = {
+  id: string;
+  event_url: string;
+  title: string | null;
+  subtitle: string | null;
+  organizer: string | null;
+  organizer_website: string | null;
+  description: string | null;
+  duration_dates: string | null;
+  days: string | null;
+  keywords: string | null;
+  scraped_at: string;
+};
+
+export type VolunteeringKeywordAIResponse = {
+  success: boolean;
+  keyword: string;
+  saved: boolean;
+  event: VolunteeringEvent | null;
+};
+
+export type NahnoImportResultRow = {
+  event_url: string;
+  status: "saved" | "skipped" | "error";
+  title: string | null;
+  reason: string | null;
+};
+
+export type NahnoImportResponse = {
+  saved: number;
+  skipped: number;
+  errors: number;
+  results: NahnoImportResultRow[];
 };

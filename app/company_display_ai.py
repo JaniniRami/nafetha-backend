@@ -11,19 +11,29 @@ from app.ollama_display_client import ollama_display_chat_raw
 
 _MAX_ABOUT_CHARS = 2000
 
-_SYSTEM_INSTRUCTION = """You are a business directory assistant. Your job is to extract structured information about a company from scraped website text.
+_SYSTEM_INSTRUCTION = """You are a keyword extractor for a student internship and career platform.
 
-The input you receive is raw scraped content from a company's about page or website. It may contain noise such as: navigation menus, cookie banners, legal boilerplate, ads, unrelated sidebar content, or other web artifacts — ignore all of that.
+You will receive scraped text from a company website. Output JSON only, no explanation.
 
-Sometimes the scraped content is not actually about a company at all. This happens when the page failed to load and instead returned an error, a CAPTCHA challenge, a bot-detection page, a Google search result page, or any other non-company content. Common signs of this include phrases like "unusual traffic", "not a robot", "IP address:", "Time:", "URL:", "Our systems have detected", or any generic error/verification page.
+Return format (STRICT, exactly three fields, nothing else):
+{"success": true|false, "description": "one sentence", "keywords": ["k1","k2","k3"]}
 
-Rules:
-- If the content is clearly not about a real company (bot check, CAPTCHA, error page, search result, empty/gibberish content), return: {"success": false, "description": "", "keywords": []}
-- If the content is about a real company but is noisy, extract what you can from the relevant parts and return success: true with a one-sentence description of what the company does and exactly 3 relevant keywords.
-- Be concise and factual. Do not invent or infer details not present in the text.
-- Keywords should reflect the company's industry, services, or domain (e.g. "fintech", "logistics", "B2B software").
-- Jordan is not a keyword, because all internship descriptions are about Jordan, do not include it in the keywords."""
+RULES:
+- Output ONLY {"success": ..., "description": ..., "keywords": [...]}. No other fields.
+- Ignore noise: navigation menus, cookie banners, legal boilerplate, ads, sidebars.
+- If the page is an error, CAPTCHA, bot-detection, Google search result, or gibberish: {"success": false, "description": "", "keywords": []}
+- Common signs of non-company pages: "unusual traffic", "not a robot", "IP address:", "Our systems have detected".
+- If success=true, return exactly 3 keywords and one short plain-English sentence describing what the company does.
+- Description should tell a student what kind of company this is in one sentence, no fluff.
+- Keywords must be lowercase, no hyphens, singular form (e.g. "engineer" not "engineers").
+- Keywords must reflect the industry, technical domain, or discipline a student would use to describe their own interests — not marketing language.
+- Do NOT use: "jordan", "solution", "innovation", "excellence", "leading", "opportunity", or any other generic business language.
+- Input may be in Arabic or English. Always output keywords and description in English.
 
+Examples:
+Input: company that builds ERP software for logistics firms -> {"success": true, "description": "Develops ERP software tailored for logistics and supply chain operations.", "keywords": ["software engineering", "logistics", "erp"]}
+Input: cybersecurity firm offering SOC and threat intelligence services -> {"success": true, "description": "Provides managed security operations and threat intelligence for enterprise clients.", "keywords": ["cybersecurity", "network security", "cloud"]}
+Input: unusual traffic detected, please verify you are not a robot -> {"success": false, "description": "", "keywords": []}"""
 
 def _parse_json_response(text: str) -> dict[str, Any]:
     raw = (text or "").strip()

@@ -11,18 +11,27 @@ from app.ollama_display_client import ollama_display_chat_raw
 _MAX_NAME_CHARS = 255
 _MAX_DESCRIPTION_CHARS = 4000
 
-_SYSTEM_INSTRUCTION = """You are an assistant for a student communities directory. Each community has a name and a longer description that may be messy, repetitive, or marketing-heavy.
+_SYSTEM_INSTRUCTION = """You are a keyword extractor for a student internship and career platform.
 
-Your task:
-- Produce exactly one clear, candidate-facing sentence that captures what the community is and who it is for. It must be a single sentence (no bullet lists, no multiple paragraphs).
-- Produce exactly 3 short keywords that reflect the community's focus, based on both the name and the description (e.g. topic, activity type, audience). Use lowercase or Title Case consistently; no full sentences as keywords.
+You will receive a community name and description. Output JSON only, no explanation.
 
-Rules:
-- If the name and description together are empty, gibberish, or clearly not about a real community (error page, CAPTCHA text, etc.), return: {"success": false, "description": "", "keywords": []}
-- Otherwise return success: true with the one-sentence description and exactly 3 keywords (array of 3 strings).
-- Be factual; do not invent events, sponsors, or details not supported by the text.
-- Jordan is not a keyword; do not use "Jordan" as a keyword."""
+Return format (STRICT, exactly three fields, nothing else):
+{"success": true|false, "description": "one sentence", "keywords": ["k1","k2","k3"]}
 
+RULES:
+- Output ONLY {"success": ..., "description": ..., "keywords": [...]}. No other fields.
+- If input is empty, gibberish, an error page, or not a real community: {"success": false, "description": "", "keywords": []}
+- If success=true, return exactly 3 keywords and one short plain-English sentence describing what the community is and who it is for.
+- Keywords must be lowercase, no hyphens, singular form (e.g. "engineer" not "engineers").
+- Keywords must reflect the technical field, discipline, or activity a student would use to describe their own interests — the same words they would type to find this community.
+- Do NOT use: "jordan", "community", "club", "member", "chapter", "event", "networking", "opportunity", "students", or any generic organizational language.
+- Input may be in Arabic or English. Always output keywords and description in English.
+
+Examples:
+Input: "IEEE — a global community for electrical and electronics engineering students and professionals" -> {"success": true, "description": "A professional community for students interested in electrical, electronics, and computing fields.", "keywords": ["electrical engineering", "electronics", "computer engineering"]}
+Input: "GDG — Google Developer Group for students building with Google technologies" -> {"success": true, "description": "A developer community for students building web and mobile apps using Google technologies.", "keywords": ["software engineering", "mobile development", "cloud"]}
+Input: "ASME — mechanical engineering students focused on design and manufacturing" -> {"success": true, "description": "A community for mechanical engineering students interested in design, manufacturing, and applied mechanics.", "keywords": ["mechanical engineering", "cad", "manufacturing"]}
+Input: "asdfgh" -> {"success": false, "description": "", "keywords": []}"""
 
 def generate_display_fields_from_community(name: str, description: str) -> dict[str, Any]:
     """

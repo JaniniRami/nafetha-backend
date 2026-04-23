@@ -19,17 +19,20 @@ from app.config import (
     CORS_ALLOWED_ORIGINS,
     CORS_ALLOWED_ORIGIN_REGEX,
     JWT_SECRET_KEY,
+    PROFILE_MATCH_MODEL_NAME,
     SESSION_COOKIE_NAME,
     SESSION_COOKIE_SECURE,
     SESSION_MAX_AGE_SECONDS,
     SESSION_SECRET_KEY,
 )
 from app.database import SessionLocal, engine
+from app.profile_matching import get_sentence_transformer
 from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
 from app.routers.catalog import router as catalog_router
 from app.routers.communities import router as communities_router
 from app.routers.favorites import router as favorites_router
+from app.routers.nahno_scrape import router as nahno_scrape_router
 from app.routers.profile import router as profile_router
 from app.routers.scrape import router as scrape_router
 from app.routers.tanqeeb_scrape import router as tanqeeb_scrape_router
@@ -40,6 +43,13 @@ async def lifespan(app: FastAPI):
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
     print("Database connection initialized")
+    try:
+        # Warm model at startup to avoid first-request latency spike.
+        get_sentence_transformer(PROFILE_MATCH_MODEL_NAME)
+        print("Profile matching model preloaded")
+    except Exception as exc:
+        # Keep app available even if model warmup fails.
+        print(f"Profile matching model preload skipped: {exc}")
     yield
     engine.dispose()
     print("Database connection closed")
@@ -76,6 +86,7 @@ app.include_router(favorites_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(scrape_router)
 app.include_router(tanqeeb_scrape_router)
+app.include_router(nahno_scrape_router)
 
 admin = Admin(
     app,

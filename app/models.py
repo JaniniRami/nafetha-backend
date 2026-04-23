@@ -54,6 +54,11 @@ class User(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    catalog_match_scores: Mapped[list["UserCatalogMatchScore"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class UserProfile(Base):
@@ -202,6 +207,26 @@ class ScrapedCompany(Base):
     )
 
 
+class VolunteeringEvent(Base):
+    __tablename__ = "volunteering_events"
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    event_url: Mapped[str] = mapped_column(String(1024), unique=True, index=True, nullable=False)
+    title: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    subtitle: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    organizer: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    organizer_website: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    duration_dates: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    days: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    keywords: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    scraped_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
 class UserCompanyFavorite(Base):
     __tablename__ = "user_company_favorites"
     __table_args__ = (UniqueConstraint("user_id", "company_id", name="uq_user_company_favorite"),)
@@ -258,6 +283,38 @@ class UserJobFavorite(Base):
     job: Mapped["ScrapedJob"] = relationship(back_populates="user_favorites", foreign_keys=[job_id])
 
 
+class UserCatalogMatchScore(Base):
+    __tablename__ = "user_catalog_match_scores"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "catalog_type",
+            "item_id",
+            name="uq_user_catalog_match_scores_user_type_item",
+        ),
+    )
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    catalog_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    item_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    score_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    profile_text: Mapped[str] = mapped_column(Text, nullable=False)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    user: Mapped["User"] = relationship(back_populates="catalog_match_scores")
+
+
 class Community(Base):
     __tablename__ = "communities"
 
@@ -305,6 +362,7 @@ class CommunityEvent(Base):
     location: Mapped[str] = mapped_column(String(1024), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     website: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    keywords: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
