@@ -2,26 +2,15 @@
 
 import logging
 from pathlib import Path
-import sys
-
-_SCRAPER_FS_ROOT = Path(__file__).resolve().parents[3] / "nafetha-scrapers"
-_LINKEDIN_DIST = _SCRAPER_FS_ROOT / "linkedin_scraper"
-if _LINKEDIN_DIST.is_dir() and str(_LINKEDIN_DIST) not in sys.path:
-    sys.path.insert(0, str(_LINKEDIN_DIST))
-
-from linkedin_scraper import (  # noqa: E402
-    BrowserManager,
-    is_logged_in,
-    login_with_credentials,
-    wait_for_manual_login,
-)
+from typing import Any
 
 from app.config import MANUAL_LOGIN
+from app.scraper.services.linkedin_runtime import get_auth_runtime
 
 logger = logging.getLogger(__name__)
 
 
-async def ensure_authenticated_session(browser: BrowserManager, session_path: Path) -> None:
+async def ensure_authenticated_session(browser: Any, session_path: Path) -> None:
     """
     Ensure an authenticated LinkedIn session is available.
 
@@ -36,6 +25,8 @@ async def ensure_authenticated_session(browser: BrowserManager, session_path: Pa
 
     A fresh session file is saved after any successful login fallback.
     """
+    is_logged_in, login_with_credentials, wait_for_manual_login = get_auth_runtime()
+
     if session_path.exists():
         try:
             await browser.load_session(str(session_path))

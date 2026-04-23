@@ -9,7 +9,6 @@ from typing import Literal
 from uuid import uuid4
 
 from app.scraper.schemas import JobProgress, JobStatusResponse, ScrapeRequest
-from app.scraper.services.scrape_runner import run_scrape_job
 
 JobState = Literal["queued", "running", "completed", "failed", "cancelling", "cancelled"]
 
@@ -139,6 +138,8 @@ class JobManager:
             return job.cancel_requested
 
         try:
+            from app.scraper.services.scrape_runner import run_scrape_job
+
             outputs = await run_scrape_job(
                 keywords=job.request.keywords,
                 locations=job.request.locations,

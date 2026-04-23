@@ -13,6 +13,10 @@ from app.scraper.schemas import (
     ScrapeRequest,
     StartJobResponse,
 )
+from app.scraper.services.linkedin_runtime import (
+    LinkedInScraperUnavailable,
+    assert_linkedin_scraper_available,
+)
 from app.scraper.services.scrape_runner import import_job_urls
 
 router = APIRouter(prefix="/api/v1/linkedin_scrape", tags=["linkedin_scrape"])
@@ -29,6 +33,11 @@ async def start_scrape(
     Headless vs visible browser is controlled by ``HEADLESS_MODE`` in the environment
     (``true`` / ``1`` / ``yes`` = headless; otherwise visible).
     """
+    try:
+        assert_linkedin_scraper_available()
+    except LinkedInScraperUnavailable as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+
     job = await job_manager.create_job(request)
     return StartJobResponse(job_id=job.id, status=job.status)
 
@@ -75,6 +84,11 @@ async def import_urls(
     }
     ```
     """
+    try:
+        assert_linkedin_scraper_available()
+    except LinkedInScraperUnavailable as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+
     raw_results = await import_job_urls(
         urls=request.urls,
         session_path=request.session_path,

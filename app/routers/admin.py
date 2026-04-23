@@ -31,7 +31,10 @@ from app.models import (
     UserRoadmapStep,
     VolunteeringEvent,
 )
-from app.scraper.services.auth import BrowserManager
+from app.scraper.services.linkedin_runtime import (
+    LinkedInScraperUnavailable,
+    get_browser_manager_class,
+)
 from app.volunteering_keyword_ai import classify_volunteering_keyword
 from app.schemas import (
     CompanyAboutBackfillRequest,
@@ -81,6 +84,7 @@ def _normalize_text(text: str, *, max_chars: int = 2000) -> str:
 
 async def _fetch_with_browser(url: str) -> tuple[str | None, str | None]:
     try:
+        BrowserManager = get_browser_manager_class()
         async with BrowserManager(headless=HEADLESS_MODE) as browser:
             await browser.page.goto(url, wait_until="domcontentloaded")
             await browser.page.wait_for_timeout(1500)
@@ -103,6 +107,8 @@ async def _fetch_with_browser(url: str) -> tuple[str | None, str | None]:
                 }
                 """
             )
+    except LinkedInScraperUnavailable as exc:
+        return None, f"browser_unavailable:{exc}"
     except Exception as exc:
         return None, f"browser_fetch_failed:{exc}"
 

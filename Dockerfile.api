@@ -6,6 +6,8 @@
 
 FROM python:3.12-bookworm
 
+ARG INSTALL_LINKEDIN_SCRAPER=false
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -22,15 +24,14 @@ COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
-# Vendored LinkedIn scraper (Playwright)
+# Vendored LinkedIn scraper (optional; enable only for local Docker scraping).
 COPY nafetha-scrapers/linkedin_scraper /tmp/linkedin_scraper
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install /tmp/linkedin_scraper \
-    && rm -rf /tmp/linkedin_scraper
+    bash -euxo pipefail -c 'if [ "$INSTALL_LINKEDIN_SCRAPER" = "true" ]; then pip install /tmp/linkedin_scraper; else echo "Skipping vendored LinkedIn scraper install"; fi; rm -rf /tmp/linkedin_scraper'
 
-# Chromium: install into BuildKit cache (reuses download across builds), copy into image for runtime.
+# Chromium is large, so skip it by default for VPS builds that never scrape.
 RUN --mount=type=cache,target=/root/.cache/pw-playwright \
-    bash -euxo pipefail -c 'export PLAYWRIGHT_BROWSERS_PATH=/root/.cache/pw-playwright && playwright install chromium --with-deps && mkdir -p /opt/ms-playwright && rm -rf /opt/ms-playwright/* && cp -a /root/.cache/pw-playwright/. /opt/ms-playwright/'
+    bash -euxo pipefail -c 'mkdir -p /opt/ms-playwright && if [ "$INSTALL_LINKEDIN_SCRAPER" = "true" ]; then export PLAYWRIGHT_BROWSERS_PATH=/root/.cache/pw-playwright && playwright install chromium --with-deps && rm -rf /opt/ms-playwright/* && cp -a /root/.cache/pw-playwright/. /opt/ms-playwright/; else echo "Skipping Playwright browser install"; fi'
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
 

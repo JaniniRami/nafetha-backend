@@ -5,7 +5,6 @@ from dataclasses import dataclass
 import logging
 from pathlib import Path
 import re
-import sys
 from uuid import UUID
 
 logger = logging.getLogger(__name__)
@@ -13,20 +12,11 @@ logger = logging.getLogger(__name__)
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 
-# Repo vendored package lives under nafetha-scrapers/linkedin_scraper/ (inner linkedin_scraper/ is the import root).
-# Prepend so it wins over a global conda/pip ``linkedin_scraper`` that may differ or be a namespace stub.
-_SCRAPER_FS_ROOT = Path(__file__).resolve().parents[3] / "nafetha-scrapers"
-_LINKEDIN_DIST = _SCRAPER_FS_ROOT / "linkedin_scraper"
-if _LINKEDIN_DIST.is_dir() and str(_LINKEDIN_DIST) not in sys.path:
-    sys.path.insert(0, str(_LINKEDIN_DIST))
-
-from linkedin_scraper import BrowserManager, CompanyScraper, JobScraper, JobSearchScraper  # noqa: E402
-from linkedin_scraper.callbacks import ConsoleCallback, SilentCallback  # noqa: E402
-
 from app.config import HEADLESS_MODE
 from app.database import SessionLocal
 from app.models import ScrapedCompany, ScrapedJob
 from app.scraper.services.auth import ensure_authenticated_session
+from app.scraper.services.linkedin_runtime import get_scrape_runtime
 
 
 @dataclass
@@ -225,6 +215,15 @@ async def import_job_urls(
     """
     from app.scraper.schemas import ImportUrlResult  # local import to avoid circular
 
+    (
+        BrowserManager,
+        _CompanyScraper,
+        JobScraper,
+        _JobSearchScraper,
+        ConsoleCallback,
+        SilentCallback,
+    ) = get_scrape_runtime()
+
     callback = ConsoleCallback(verbose=verbose) if verbose else SilentCallback()
     results: list[dict] = []
     db = SessionLocal()
@@ -313,6 +312,15 @@ async def run_scrape_job(
     """
     Execute scraping workflow and keep progress synced through callbacks.
     """
+    (
+        BrowserManager,
+        CompanyScraper,
+        JobScraper,
+        JobSearchScraper,
+        ConsoleCallback,
+        SilentCallback,
+    ) = get_scrape_runtime()
+
     callback = ConsoleCallback(verbose=True) if verbose else SilentCallback()
     cleaned_keywords = [item.strip() for item in keywords if item and item.strip()]
     if not cleaned_keywords:
