@@ -316,6 +316,16 @@ class ScrapedJobOut(BaseModel):
         return data
 
 
+class PaginatedScrapedJobsOut(BaseModel):
+    """Paginated scraped jobs ordered by personalized matching score."""
+
+    items: list[ScrapedJobOut]
+    total: int
+    offset: int
+    limit: int
+    has_more: bool
+
+
 class ScrapedCompanyOut(BaseModel):
     """Company row as returned to clients; list endpoint only includes non-blacklisted rows."""
 
@@ -334,6 +344,16 @@ class ScrapedCompanyOut(BaseModel):
     displayed_keywords: str | None
     matching_percentage: float | None = None
     scraped_at: datetime
+
+
+class PaginatedScrapedCompaniesOut(BaseModel):
+    """Paginated scraped companies ordered by personalized matching score."""
+
+    items: list[ScrapedCompanyOut]
+    total: int
+    offset: int
+    limit: int
+    has_more: bool
 
 
 class VolunteeringEventOut(BaseModel):
@@ -765,6 +785,7 @@ class CommunityOut(BaseModel):
     description: str
     website: str | None
     keywords: str | None
+    matching_percentage: float | None = None
     created_by_user_id: UUID | None
     created_at: datetime
 

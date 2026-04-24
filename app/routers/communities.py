@@ -17,6 +17,7 @@ from app.models import (
     Community,
     CommunityEvent,
     User,
+    UserCatalogMatchScore,
     UserCommunityEventFavorite,
     UserCommunitySubscription,
 )
@@ -60,25 +61,71 @@ def _get_event_in_community_or_404(db: Session, community_id: UUID, event_id: UU
 
 @router.get("", response_model=list[CommunityOut])
 def list_communities(
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[Community]:
-    stmt = select(Community).order_by(Community.created_at.desc())
-    return list(db.scalars(stmt).all())
+) -> list[CommunityOut]:
+    score_join = (
+        (UserCatalogMatchScore.user_id == current_user.id)
+        & (UserCatalogMatchScore.catalog_type == "communities")
+        & (UserCatalogMatchScore.item_id == Community.id)
+    )
+    rows = db.execute(
+        select(Community, UserCatalogMatchScore.score_percent)
+        .outerjoin(UserCatalogMatchScore, score_join)
+        .order_by(UserCatalogMatchScore.score_percent.desc().nullslast(), Community.created_at.desc())
+    ).all()
+
+    out: list[CommunityOut] = []
+    for community, score_percent in rows:
+        payload = CommunityOut.model_validate(community).model_dump()
+        payload["matching_percentage"] = float(score_percent) if score_percent is not None else None
+        out.append(CommunityOut.model_validate(payload))
+    return out
 
 
 @router.get("/full", response_model=list[CommunityWithEventsOut])
 def list_communities_with_events(
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[Community]:
+) -> list[CommunityWithEventsOut]:
     """All communities, each with its events (same auth as ``GET /communities``)."""
-    stmt = (
-        select(Community)
-        .options(selectinload(Community.events))
-        .order_by(Community.created_at.desc())
+    community_score_join = (
+        (UserCatalogMatchScore.user_id == current_user.id)
+        & (UserCatalogMatchScore.catalog_type == "communities")
+        & (UserCatalogMatchScore.item_id == Community.id)
     )
-    return list(db.scalars(stmt).all())
+    community_rows = db.execute(
+        select(Community, UserCatalogMatchScore.score_percent)
+        .options(selectinload(Community.events))
+        .outerjoin(UserCatalogMatchScore, community_score_join)
+        .order_by(UserCatalogMatchScore.score_percent.desc().nullslast(), Community.created_at.desc())
+    ).all()
+    event_scores = {
+        item_id: float(score_percent)
+        for item_id, score_percent in db.execute(
+            select(UserCatalogMatchScore.item_id, UserCatalogMatchScore.score_percent).where(
+                UserCatalogMatchScore.user_id == current_user.id,
+                UserCatalogMatchScore.catalog_type == "community_events",
+            )
+        ).all()
+    }
+
+    out: list[CommunityWithEventsOut] = []
+    for community, score_percent in community_rows:
+        payload = CommunityWithEventsOut.model_validate(community).model_dump()
+        payload["matching_percentage"] = float(score_percent) if score_percent is not None else None
+        events_payload = payload.get("events", [])
+        events_payload.sort(
+            key=lambda item: (
+                event_scores.get(item["id"]) is None,
+                -(event_scores.get(item["id"]) or 0.0),
+            )
+        )
+        for event_item in events_payload:
+            event_item["matching_percentage"] = event_scores.get(event_item["id"])
+        payload["events"] = events_payload
+        out.append(CommunityWithEventsOut.model_validate(payload))
+    return out
 
 
 @router.post(
@@ -303,16 +350,27 @@ def delete_community(
 @router.get("/{community_id}/events", response_model=list[CommunityEventOut])
 def list_community_events(
     community_id: UUID,
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[CommunityEvent]:
+) -> list[CommunityEventOut]:
     _get_community_or_404(db, community_id)
-    stmt = (
-        select(CommunityEvent)
-        .where(CommunityEvent.community_id == community_id)
-        .order_by(CommunityEvent.event_at.asc())
+    score_join = (
+        (UserCatalogMatchScore.user_id == current_user.id)
+        & (UserCatalogMatchScore.catalog_type == "community_events")
+        & (UserCatalogMatchScore.item_id == CommunityEvent.id)
     )
-    return list(db.scalars(stmt).all())
+    rows = db.execute(
+        select(CommunityEvent, UserCatalogMatchScore.score_percent)
+        .outerjoin(UserCatalogMatchScore, score_join)
+        .where(CommunityEvent.community_id == community_id)
+        .order_by(UserCatalogMatchScore.score_percent.desc().nullslast(), CommunityEvent.event_at.asc())
+    ).all()
+    out: list[CommunityEventOut] = []
+    for event, score_percent in rows:
+        payload = CommunityEventOut.model_validate(event).model_dump()
+        payload["matching_percentage"] = float(score_percent) if score_percent is not None else None
+        out.append(CommunityEventOut.model_validate(payload))
+    return out
 
 
 @router.post(

@@ -3,7 +3,7 @@
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -17,6 +17,8 @@ from app.schemas import (
     CommunityEventOut,
     DailyHighlightsOut,
     DailyHighlightUserOut,
+    PaginatedScrapedCompaniesOut,
+    PaginatedScrapedJobsOut,
     ScrapedCompanyOut,
     ScrapedJobOut,
     VolunteeringEventOut,
@@ -89,30 +91,45 @@ def _top_environmental_volunteering_match(
     return item_id, float(score_percent)
 
 
-@router.get("/jobs", response_model=list[ScrapedJobOut])
+@router.get("/jobs", response_model=PaginatedScrapedJobsOut)
 def list_jobs(
     current_user: User = Depends(get_current_user),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
-) -> list[ScrapedJobOut]:
+) -> PaginatedScrapedJobsOut:
+    score_join = (
+        (UserCatalogMatchScore.user_id == current_user.id)
+        & (UserCatalogMatchScore.catalog_type == "jobs")
+        & (UserCatalogMatchScore.item_id == ScrapedJob.id)
+    )
     stmt = (
-        select(ScrapedJob)
+        select(ScrapedJob, UserCatalogMatchScore.score_percent)
+        .outerjoin(UserCatalogMatchScore, score_join)
         .options(selectinload(ScrapedJob.company))
-        .order_by(ScrapedJob.scraped_at.desc())
-    )
-    rows = list(db.scalars(stmt).all())
-    scores = _matching_percent_map(db, current_user.id, "jobs")
-    out: list[ScrapedJobOut] = []
-    for row in rows:
-        payload = ScrapedJobOut.model_validate(row).model_dump()
-        payload["matching_percentage"] = scores.get(row.id)
-        out.append(ScrapedJobOut.model_validate(payload))
-    out.sort(
-        key=lambda item: (
-            item.matching_percentage is None,
-            -(item.matching_percentage or 0.0),
+        .order_by(
+            UserCatalogMatchScore.score_percent.desc().nullslast(),
+            ScrapedJob.scraped_at.desc(),
         )
+        .offset(offset)
+        .limit(limit)
     )
-    return out
+    rows = db.execute(stmt).all()
+    items: list[ScrapedJobOut] = []
+    for job, score_percent in rows:
+        payload = ScrapedJobOut.model_validate(job).model_dump()
+        payload["matching_percentage"] = float(score_percent) if score_percent is not None else None
+        items.append(ScrapedJobOut.model_validate(payload))
+
+    total = int(db.scalar(select(func.count()).select_from(ScrapedJob)) or 0)
+    has_more = (offset + len(items)) < total
+    return PaginatedScrapedJobsOut(
+        items=items,
+        total=total,
+        offset=offset,
+        limit=limit,
+        has_more=has_more,
+    )
 
 
 @router.get("/match-scores", response_model=CatalogMatchScoresOut)
@@ -237,30 +254,52 @@ def get_daily_highlights(
     )
 
 
-@router.get("/companies", response_model=list[ScrapedCompanyOut])
+@router.get("/companies", response_model=PaginatedScrapedCompaniesOut)
 def list_companies(
     current_user: User = Depends(get_current_user),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
-) -> list[ScrapedCompanyOut]:
+) -> PaginatedScrapedCompaniesOut:
+    score_join = (
+        (UserCatalogMatchScore.user_id == current_user.id)
+        & (UserCatalogMatchScore.catalog_type == "companies")
+        & (UserCatalogMatchScore.item_id == ScrapedCompany.id)
+    )
     stmt = (
-        select(ScrapedCompany)
+        select(ScrapedCompany, UserCatalogMatchScore.score_percent)
+        .outerjoin(UserCatalogMatchScore, score_join)
         .where(ScrapedCompany.blacklisted.is_(False))
-        .order_by(ScrapedCompany.scraped_at.desc())
-    )
-    rows = list(db.scalars(stmt).all())
-    scores = _matching_percent_map(db, current_user.id, "companies")
-    out: list[ScrapedCompanyOut] = []
-    for row in rows:
-        payload = ScrapedCompanyOut.model_validate(row).model_dump()
-        payload["matching_percentage"] = scores.get(row.id)
-        out.append(ScrapedCompanyOut.model_validate(payload))
-    out.sort(
-        key=lambda item: (
-            item.matching_percentage is None,
-            -(item.matching_percentage or 0.0),
+        .order_by(
+            UserCatalogMatchScore.score_percent.desc().nullslast(),
+            ScrapedCompany.scraped_at.desc(),
         )
+        .offset(offset)
+        .limit(limit)
     )
-    return out
+    rows = db.execute(stmt).all()
+    items: list[ScrapedCompanyOut] = []
+    for company, score_percent in rows:
+        payload = ScrapedCompanyOut.model_validate(company).model_dump()
+        payload["matching_percentage"] = float(score_percent) if score_percent is not None else None
+        items.append(ScrapedCompanyOut.model_validate(payload))
+
+    total = int(
+        db.scalar(
+            select(func.count())
+            .select_from(ScrapedCompany)
+            .where(ScrapedCompany.blacklisted.is_(False))
+        )
+        or 0
+    )
+    has_more = (offset + len(items)) < total
+    return PaginatedScrapedCompaniesOut(
+        items=items,
+        total=total,
+        offset=offset,
+        limit=limit,
+        has_more=has_more,
+    )
 
 
 @router.get("/companies/{company_id}", response_model=ScrapedCompanyOut)
