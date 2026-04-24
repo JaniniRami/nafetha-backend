@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Any
 
 from openrouter import OpenRouter
 
 from app.config import OPENROUTER_API_KEY
+
+logger = logging.getLogger(__name__)
 
 _ROADMAP_SCHEMA: dict[str, Any] = {
     "type": "array",
@@ -112,6 +115,15 @@ def _extract_openrouter_text_content(content: Any) -> str:
     return str(content or "")
 
 
+def _openrouter_key_debug_label(api_key: str) -> str:
+    s = (api_key or "").strip()
+    if not s:
+        return "missing"
+    if len(s) <= 8:
+        return "set(len<=8)"
+    return f"set(len={len(s)}, tail=...{s[-4:]})"
+
+
 def generate_personalized_roadmap(
     *,
     major: str,
@@ -120,7 +132,9 @@ def generate_personalized_roadmap(
     goal_skill: str,
     checked_prerequisites: list[str],
 ) -> list[dict[str, str]]:
-    if not (OPENROUTER_API_KEY or "").strip():
+    key = (OPENROUTER_API_KEY or "").strip()
+    if not key:
+        logger.error("openrouter roadmap: OPENROUTER_API_KEY is empty")
         raise RuntimeError("OPENROUTER_API_KEY is not set")
 
     cleaned_interests = _clean_prompt_list(interests)
@@ -135,19 +149,47 @@ def generate_personalized_roadmap(
         f"- Goal skill: {cleaned_goal_skill or goal_skill}\n"
         f"- Skills they already have: {', '.join(cleaned_prerequisites) if cleaned_prerequisites else 'None'}"
     )
-    with OpenRouter(api_key=OPENROUTER_API_KEY.strip()) as client:
-        response = client.chat.send(
-            model=_ROADMAP_MODEL,
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            response_format={"type": "json_schema", "json_schema": {"name": "roadmap_steps", "schema": _ROADMAP_SCHEMA}},
-        )
+    logger.info(
+        "openrouter roadmap request model=%s key=%s goal_skill=%r",
+        _ROADMAP_MODEL,
+        _openrouter_key_debug_label(key),
+        goal_skill,
+    )
+    try:
+        with OpenRouter(api_key=key) as client:
+            response = client.chat.send(
+                model=_ROADMAP_MODEL,
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {"name": "roadmap_steps", "schema": _ROADMAP_SCHEMA},
+                },
+            )
+    except Exception:
+        logger.exception("openrouter roadmap: chat.send failed model=%s", _ROADMAP_MODEL)
+        raise
+
     raw_text = _extract_openrouter_text_content(response.choices[0].message.content)
+    logger.debug("openrouter roadmap raw_output_chars=%s preview=%r", len(raw_text), raw_text[:500])
     print(f"[roadmap-openrouter] raw_output={raw_text}", flush=True)
-    steps = _parse_json_array_response(raw_text)
+    try:
+        steps = _parse_json_array_response(raw_text)
+    except Exception:
+        logger.exception(
+            "openrouter roadmap: JSON parse failed raw_chars=%s preview=%r",
+            len(raw_text),
+            (raw_text or "")[:800],
+        )
+        raise
     if not steps:
+        logger.error(
+            "openrouter roadmap: no valid steps after parse raw_chars=%s preview=%r",
+            len(raw_text),
+            (raw_text or "")[:800],
+        )
         raise ValueError("roadmap generation returned no valid steps")
     if len(steps) > 10:
         steps = steps[:10]

@@ -1,6 +1,7 @@
 """Profile-related API routes."""
 
 import json
+import logging
 from functools import lru_cache
 from pathlib import Path
 from uuid import UUID
@@ -26,6 +27,8 @@ from app.schemas import (
     SkillPrerequisitesOut,
     UserProfileOut,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["profile"])
 _DEMAND_BY_MAJOR_PATH = Path(__file__).resolve().parents[2] / "data" / "skills" / "demand_by_major.json"
@@ -418,8 +421,23 @@ def generate_profile_roadmap(
         .limit(1)
     )
     if existing_roadmap is not None:
+        logger.info(
+            "roadmap cache hit user=%s profile=%s goal_skill=%r roadmap_id=%s",
+            current_user.id,
+            profile.id,
+            goal_skill,
+            existing_roadmap.id,
+        )
         return _roadmap_response_from_db(existing_roadmap, db)
 
+    logger.info(
+        "roadmap generate start user=%s profile=%s goal_skill=%r interests=%s prereqs=%s",
+        current_user.id,
+        profile.id,
+        goal_skill,
+        len(interests),
+        len(checked_prerequisites),
+    )
     try:
         roadmap = generate_personalized_roadmap(
             major=profile.major,
@@ -429,10 +447,24 @@ def generate_profile_roadmap(
             checked_prerequisites=list(checked_prerequisites),
         )
     except Exception as exc:
+        logger.exception(
+            "roadmap generate failed user=%s profile=%s goal_skill=%r",
+            current_user.id,
+            profile.id,
+            goal_skill,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Roadmap generation failed: {exc}",
         ) from exc
+
+    logger.info(
+        "roadmap generate ok user=%s profile=%s goal_skill=%r step_count=%s",
+        current_user.id,
+        profile.id,
+        goal_skill,
+        len(roadmap),
+    )
 
     user_roadmap = UserRoadmap(
         user_id=current_user.id,
