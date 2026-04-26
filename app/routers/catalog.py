@@ -50,6 +50,8 @@ def _matching_percent_map(
     return {item_id: float(score_percent) for item_id, score_percent in rows}
 
 
+
+
 def _top_match_for_type(
     db: Session,
     user_id: UUID,
@@ -115,6 +117,7 @@ def list_jobs(
         .limit(limit)
     )
     rows = db.execute(stmt).all()
+
     items: list[ScrapedJobOut] = []
     for job, score_percent in rows:
         payload = ScrapedJobOut.model_validate(job).model_dump()
@@ -278,6 +281,7 @@ def list_companies(
         .limit(limit)
     )
     rows = db.execute(stmt).all()
+
     items: list[ScrapedCompanyOut] = []
     for company, score_percent in rows:
         payload = ScrapedCompanyOut.model_validate(company).model_dump()

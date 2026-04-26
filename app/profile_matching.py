@@ -79,7 +79,7 @@ MAJOR_SKILLS_2026 = {
     "Project Engineering", "Machine Design", "Refrigeration Systems", "Robotics Basics", "Technical Reporting"
   ],
   "Electrical Engineering": [
-    "Power System Analysis", "Circuit Design", "PLC Programming", "Control Systems", "Electrical Installation", 
+    "Power System Analysis", "FPGA", "SemiConductors", "Circuit Design", "PLC Programming", "Control Systems", "Electrical Installation", 
     "Renewable Energy Systems", "Lighting Design", "Transmission & Distribution", "Microcontrollers", "Protection Systems", 
     "Electrical Troubleshooting", "MATLAB Simulation", "Smart Grid Technology", "Instrumentation", "EMC/EMI Knowledge", 
     "Project Estimation", "Site Commissioning", "Telecommunication Systems", "PCB Design", "Industrial Automation"
@@ -368,6 +368,45 @@ CATALOG_TYPES: Final[set[str]] = set(DATASET_NAMES)
 _COSINE_MIN: Final[float] = 0.20
 _COSINE_MAX: Final[float] = 0.55
 
+# Display-score settings — applied once at persist time for jobs & companies only.
+# Scores below _DISPLAY_FLOOR are never scaled or smoothed.
+# If the top raw score is below _DISPLAY_THRESHOLD, it is lifted to _DISPLAY_TARGET
+# and all other eligible scores are smoothed along a power curve.
+_DISPLAY_DATASETS: Final[frozenset[str]] = frozenset({"jobs", "companies"})
+_DISPLAY_FLOOR: Final[float] = 30.0
+_DISPLAY_THRESHOLD: Final[float] = 80.0
+_DISPLAY_TARGET: Final[float] = 90.0
+_DISPLAY_GAMMA: Final[float] = 0.6
+
+
+def _compute_display_scores(scores: list[dict[str, float | str]]) -> list[dict[str, float | str]]:
+    """Apply scaling + power-curve smoothing to a sorted list of score dicts.
+
+    Each dict must have ``score_percent`` (float) and ``id`` (str) keys.
+    The list is expected to be sorted descending by score_percent.
+    Only mutates ``score_percent``; all other keys are left untouched.
+    """
+    if not scores:
+        return scores
+
+    max_raw = float(scores[0]["score_percent"])
+    if max_raw <= 0:
+        return scores
+
+    # Decide displayed maximum: bump to _DISPLAY_TARGET if below _DISPLAY_THRESHOLD.
+    max_display = _DISPLAY_TARGET if max_raw < _DISPLAY_THRESHOLD else max_raw
+
+    result = []
+    for entry in scores:
+        raw = float(entry["score_percent"])
+        if raw < _DISPLAY_FLOOR:
+            displayed = raw
+        else:
+            ratio = raw / max_raw
+            displayed = min(max_display * (ratio ** _DISPLAY_GAMMA), 100.0)
+        result.append({**entry, "score_percent": round(displayed, 2)})
+    return result
+
 
 @dataclass(frozen=True)
 class EmbeddingDataset:
@@ -618,6 +657,8 @@ def persist_catalog_match_scores_for_user(
         dataset_scores = computed.get(dataset_name, [])
         if not isinstance(dataset_scores, list):
             continue
+        if dataset_name in _DISPLAY_DATASETS:
+            dataset_scores = _compute_display_scores(dataset_scores)
         for row in dataset_scores:
             item_id_raw = row.get("id")
             if item_id_raw is None:
